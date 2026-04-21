@@ -1,0 +1,12 @@
+{
+  "name": "adaptaeval-gemini",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Frontend docente simple + backend minimo para Gemini free tier",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js"
+  }
+}

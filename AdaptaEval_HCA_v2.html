@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AdaptaEval | Version Docente</title>
+<style>
+:root{
+  --bg:#edf3f8;
+  --surface:#ffffff;
+  --surface-soft:#f8fbfd;
+  --ink:#17344f;
+  --muted:#607387;
+  --line:#d8e2ec;
+  --brand:#183b63;
+  --brand-2:#2c5d8f;
+  --gold:#caa24a;
+  --ok-bg:#eef8f1;
+  --ok-line:#abd2b5;
+  --ok-ink:#256941;
+  --warn-bg:#fff6e6;
+  --warn-line:#ebc86d;
+  --warn-ink:#7f5c0c;
+  --info-bg:#eef6ff;
+  --info-line:#c7dbf5;
+  --info-ink:#28598f;
+  --danger-bg:#fff0ef;
+  --danger-line:#ecbbb5;
+  --danger-ink:#983328;
+  --shadow:0 18px 38px rgba(16,35,60,.08);
+  --radius:20px;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  font-family:"Segoe UI",Tahoma,Geneva,Verdana,sans-serif;
+  color:#223447;
+  background:
+    radial-gradient(circle at top left, rgba(202,162,74,.12), transparent 24%),
+    linear-gradient(180deg,#f7fafc 0%, var(--bg) 100%);
+}
+
+.topbar{
+  background:linear-gradient(135deg,var(--brand) 0%, #244a75 52%, var(--brand-2) 100%);
+  color:#fff;
+}
+.topbar-inner{
+  max-width:1160px;
+  margin:0 auto;
+  padding:28px 24px;
+  display:flex;
+  gap:18px;
+  align-items:flex-start;
+}
+.brand-mark{
+  width:62px;
+  height:62px;
+  border-radius:18px;
+  display:grid;
+  place-items:center;
+  border:1px solid rgba(255,255,255,.28);
+  background:rgba(255,255,255,.12);
+  flex:none;
+}
+.title h1{
+  margin:0;
+  font-size:clamp(1.8rem,3vw,2.4rem);
+}
+.title p{
+  margin:8px 0 0;
+  color:rgba(255,255,255,.84);
+  line-height:1.65;
+  max-width:760px;
+}
+.pills{
+  margin-left:auto;
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.pill{
+  padding:7px 12px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.22);
+  background:rgba(255,255,255,.12);
+  font-size:.8rem;
+}
+
+.shell{
+  max-width:1160px;
+  margin:0 auto;
+  padding:24px;
+  display:grid;
+  gap:18px;
+}
+
+.card,.message{
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+}
+.card-header{
+  padding:20px 22px 14px;
+  border-bottom:1px solid #eef2f6;
+}
+.card-header h2,.card-header h3{
+  margin:0;
+  color:var(--ink);
+}
+.card-header p{
+  margin:7px 0 0;
+  color:var(--muted);
+  line-height:1.6;
+}
+.card-body{padding:22px}
+
+.hero-note{
+  padding:18px 20px;
+  border-left:6px solid var(--gold);
+}
+.hero-note strong{
+  display:block;
+  color:var(--brand);
+  margin-bottom:6px;
+}
+.hero-note p{
+  margin:0;
+  color:var(--muted);
+  line-height:1.65;
+}
+
+.steps{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:14px;
+}
+.step{
+  padding:18px;
+  border:1px solid var(--line);
+  border-radius:18px;
+  background:linear-gradient(180deg,#fff,#f8fbff);
+}
+.step strong{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  color:var(--ink);
+  margin-bottom:8px;
+}
+.step span{
+  display:block;
+  color:var(--muted);
+  line-height:1.55;
+}
+.badge{
+  width:30px;
+  height:30px;
+  border-radius:50%;
+  background:var(--brand);
+  color:#fff;
+  display:grid;
+  place-items:center;
+  font-size:.86rem;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:16px;
+}
+.field{
+  display:grid;
+  gap:8px;
+}
+.field.full{grid-column:1/-1}
+label{
+  color:var(--ink);
+  font-size:.93rem;
+  font-weight:600;
+}
+.hint{
+  color:var(--muted);
+  font-size:.82rem;
+  line-height:1.5;
+}
+input[type="text"], textarea, select{
+  width:100%;
+  padding:12px 14px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:#fff;
+  color:#223447;
+  font:inherit;
+}
+textarea{
+  resize:vertical;
+  min-height:124px;
+}
+input:focus, textarea:focus, select:focus{
+  outline:none;
+  border-color:#86abd1;
+  box-shadow:0 0 0 4px rgba(44,93,143,.1);
+}
+
+.checks{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+.check{
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+  padding:12px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:var(--surface-soft);
+}
+.check input{
+  margin-top:3px;
+  accent-color:var(--brand-2);
+}
+.check span{
+  color:#31465a;
+  line-height:1.45;
+}
+
+.button-row{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+button{
+  border:none;
+  border-radius:14px;
+  padding:12px 16px;
+  font:inherit;
+  font-weight:600;
+  cursor:pointer;
+  transition:transform .15s ease, box-shadow .15s ease;
+}
+button:hover{transform:translateY(-1px)}
+button:disabled{
+  opacity:.6;
+  cursor:not-allowed;
+  transform:none;
+}
+.primary{
+  background:linear-gradient(135deg,var(--brand) 0%, var(--brand-2) 100%);
+  color:#fff;
+  box-shadow:0 12px 24px rgba(24,59,99,.18);
+}
+.secondary{
+  background:#fff;
+  color:var(--ink);
+  border:1px solid var(--line);
+}
+.soft{
+  background:#f2f6fa;
+  color:var(--ink);
+  border:1px solid #dfe7ef;
+}
+
+.message{
+  display:none;
+  padding:14px 16px;
+  line-height:1.6;
+}
+.message.show{display:block}
+.message.info{
+  background:var(--info-bg);
+  border-color:var(--info-line);
+  color:var(--info-ink);
+}
+.message.success{
+  background:var(--ok-bg);
+  border-color:var(--ok-line);
+  color:var(--ok-ink);
+}
+.message.warn{
+  background:var(--warn-bg);
+  border-color:var(--warn-line);
+  color:var(--warn-ink);
+}
+.message.error{
+  background:var(--danger-bg);
+  border-color:var(--danger-line);
+  color:var(--danger-ink);
+}
+
+.loader{
+  display:none;
+  padding:18px;
+  border-radius:16px;
+  border:1px solid var(--info-line);
+  background:var(--info-bg);
+}
+.loader.show{display:block}
+.loader strong{
+  display:block;
+  color:var(--brand);
+  margin-bottom:8px;
+}
+.loader ul{
+  margin:0;
+  padding-left:18px;
+  color:var(--info-ink);
+  line-height:1.6;
+}
+
+.tabs{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-bottom:14px;
+}
+.tab-btn{
+  background:#f2f6fa;
+  color:var(--muted);
+  border:1px solid var(--line);
+}
+.tab-btn.active{
+  background:var(--brand);
+  color:#fff;
+  border-color:var(--brand);
+}
+.tab-panel{
+  display:none;
+  border:1px solid var(--line);
+  border-radius:16px;
+  background:#fff;
+  padding:18px;
+}
+.tab-panel.active{display:block}
+.panel-top{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-bottom:12px;
+}
+.panel-top h3{
+  margin:0;
+  color:var(--ink);
+}
+.panel-top p{
+  margin:6px 0 0;
+  color:var(--muted);
+}
+.panel-content{
+  min-height:240px;
+  padding:16px;
+  border:1px solid #e7edf4;
+  border-radius:14px;
+  background:#fbfdff;
+  white-space:pre-wrap;
+  line-height:1.72;
+}
+.rendered-doc{
+  white-space:normal;
+  line-height:1.75;
+  color:#223447;
+}
+.rendered-doc p{
+  margin:0 0 12px;
+}
+.rendered-doc .doc-title{
+  font-size:1.2rem;
+  font-weight:700;
+  color:var(--brand);
+  margin:0 0 14px;
+}
+.rendered-doc .doc-subtitle{
+  font-size:1.05rem;
+  font-weight:700;
+  color:var(--ink);
+  margin:18px 0 10px;
+}
+.rendered-doc .doc-line{
+  margin:0 0 8px;
+}
+.rendered-doc .doc-list{
+  margin:0 0 14px 22px;
+  padding:0;
+}
+.rendered-doc .doc-list li{
+  margin:0 0 6px;
+}
+.rendered-doc .doc-block{
+  margin:14px 0;
+}
+.rendered-doc .doc-space{
+  letter-spacing:.03em;
+}
+
+.teacher-table-wrap{overflow:auto}
+.teacher-table{
+  width:100%;
+  min-width:760px;
+  border-collapse:collapse;
+}
+.teacher-table th,.teacher-table td{
+  padding:12px;
+  border-bottom:1px solid #e7edf4;
+  text-align:left;
+  vertical-align:top;
+  line-height:1.55;
+}
+.teacher-table th{
+  background:#edf4fb;
+  color:var(--brand);
+  font-size:.84rem;
+}
+.note{
+  margin-top:14px;
+  padding:14px 16px;
+  border-radius:14px;
+  background:var(--warn-bg);
+  border:1px solid var(--warn-line);
+  color:var(--warn-ink);
+  line-height:1.6;
+}
+.footer{
+  text-align:center;
+  color:var(--muted);
+  font-size:.85rem;
+  padding:8px 0 26px;
+}
+
+@media (max-width:980px){
+  .steps,.grid,.checks{grid-template-columns:1fr}
+  .topbar-inner{flex-direction:column}
+  .pills{margin-left:0}
+}
+@media (max-width:680px){
+  .shell{padding:16px}
+  .card-header,.card-body{padding:18px}
+  .button-row,.panel-top{flex-direction:column}
+  button{width:100%}
+}
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand-mark" aria-hidden="true">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+          <path d="M6 4h9a3 3 0 0 1 3 3v13l-4-2-4 2-4-2-4 2V7a3 3 0 0 1 3-3h1Z" stroke="white" stroke-width="1.7" stroke-linejoin="round"/>
+          <path d="M8 8h6M8 12h7" stroke="white" stroke-width="1.7" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="title">
+        <h1>AdaptaEval</h1>
+        <p>Instituto Hans Christian Andersen. Herramienta simple para que el docente pegue su prueba y reciba una version adaptada dentro de la misma pagina.</p>
+      </div>
+      <div class="pills">
+        <span class="pill">Version docente</span>
+        <span class="pill">Gemini</span>
+        <span class="pill">Decreto 83/2015</span>
+        <span class="pill">Decreto 67/2018</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="card hero-note">
+      <strong>El profesor no necesita saber nada técnico.</strong>
+      <p>La complejidad queda escondida en el servidor. El docente solo pega la prueba, describe el perfil del estudiante y obtiene la nueva version adaptada con resumen de cambios y justificacion docente.</p>
+    </section>
+
+    <section class="steps">
+      <article class="step">
+        <strong><span class="badge">1</span>Pega la prueba</strong>
+        <span>Trabaja desde el texto real del instrumento para una adaptacion mas fiel.</span>
+      </article>
+      <article class="step">
+        <strong><span class="badge">2</span>Describe el estudiante</strong>
+        <span>Solo lo pedagógicamente util: NEE, barreras y apoyos que necesitas priorizar.</span>
+      </article>
+      <article class="step">
+        <strong><span class="badge">3</span>Recibe la adaptación</strong>
+        <span>La plataforma genera la nueva prueba, el resumen de cambios y la justificacion dentro de la misma pagina.</span>
+      </article>
+    </section>
+
+    <div id="globalMessage" class="message" role="status" aria-live="polite"></div>
+
+    <section class="card">
+      <div class="card-header">
+        <h2>Generar prueba adaptada</h2>
+        <p>Llena solo lo necesario. Si un campo no te aporta, puedes dejarlo vacio salvo el perfil del estudiante y la prueba original.</p>
+      </div>
+      <div class="card-body">
+        <div class="grid">
+          <div class="field">
+            <label for="subject">Asignatura</label>
+            <input id="subject" type="text" placeholder="Opcional. Ej.: Lenguaje, Matematica, Historia">
+          </div>
+          <div class="field">
+            <label for="course">Curso</label>
+            <input id="course" type="text" placeholder="Opcional. Ej.: 5 Basico, 1 Medio">
+          </div>
+          <div class="field full">
+            <label for="learningGoal">Objetivo de aprendizaje</label>
+            <textarea id="learningGoal" placeholder="Opcional. Si lo conoces, ayuda a mantener el foco evaluativo."></textarea>
+          </div>
+          <div class="field full">
+            <label for="studentProfile">NEE o perfil del estudiante</label>
+            <textarea id="studentProfile" placeholder="Ej.: TEL mixto, TDAH, TEA nivel 1, dificultades lectoras, rezago en comprension, bajo umbral atencional, etc."></textarea>
+          </div>
+          <div class="field full">
+            <label for="evaluationText">Prueba original</label>
+            <textarea id="evaluationText" placeholder="Pega aqui la prueba completa: instrucciones, preguntas, alternativas, encabezados, puntajes y cualquier parte que quieras adaptar."></textarea>
+            <div class="hint">Para mejores resultados, pega el texto completo. Si hoy solo trabajas con archivo, conviértelo primero a texto para que la adaptación sea precisa.</div>
+          </div>
+          <div class="field full">
+            <label>Ajustes que deseas privilegiar</label>
+            <div class="checks" id="supportChecks">
+              <label class="check"><input type="checkbox" value="Simplificar lenguaje"><span>Simplificar lenguaje</span></label>
+              <label class="check"><input type="checkbox" value="Dividir consignas en pasos"><span>Dividir consignas en pasos</span></label>
+              <label class="check"><input type="checkbox" value="Reducir cantidad de items"><span>Reducir cantidad de items</span></label>
+              <label class="check"><input type="checkbox" value="Agregar apoyos visuales escritos"><span>Agregar apoyos visuales escritos</span></label>
+              <label class="check"><input type="checkbox" value="Disminuir carga de escritura"><span>Disminuir carga de escritura</span></label>
+              <label class="check"><input type="checkbox" value="Hacer alternativas mas claras"><span>Hacer alternativas mas claras</span></label>
+              <label class="check"><input type="checkbox" value="Agregar ejemplo inicial"><span>Agregar ejemplo inicial</span></label>
+              <label class="check"><input type="checkbox" value="Mantener exigencia con acceso mas claro"><span>Mantener exigencia con acceso mas claro</span></label>
+            </div>
+          </div>
+          <div class="field full">
+            <label for="teacherNote">Observacion docente</label>
+            <textarea id="teacherNote" placeholder="Opcional. Ej.: necesito mantener el puntaje, me cuesta simplificar sin bajar el nivel, quiero reducir la escritura, etc."></textarea>
+          </div>
+        </div>
+        <div class="button-row" style="margin-top:18px;">
+          <button type="button" class="primary" id="generateBtn">Generar prueba adaptada</button>
+          <button type="button" class="secondary" id="healthBtn">Verificar servicio</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="loader" class="loader">
+      <strong>AdaptaEval está generando la adaptación</strong>
+      <ul>
+        <li>Preparando el encargo pedagógico.</li>
+        <li>Generando la nueva prueba adaptada.</li>
+        <li>Ordenando resumen de cambios y justificación docente.</li>
+      </ul>
+    </section>
+
+    <section id="resultsCard" class="card" hidden>
+      <div class="card-header">
+        <h2>Resultados</h2>
+        <p>La adaptación queda organizada en pestañas y lista para descargar.</p>
+      </div>
+      <div class="card-body">
+        <div id="resultMessage" class="message"></div>
+        <div class="tabs" role="tablist">
+          <button type="button" class="tab-btn active" data-tab="adapted">Prueba adaptada</button>
+          <button type="button" class="tab-btn" data-tab="summary">Resumen de cambios</button>
+          <button type="button" class="tab-btn" data-tab="teacher">Justificación docente</button>
+        </div>
+
+        <div id="tab-adapted" class="tab-panel active">
+          <div class="panel-top">
+            <div>
+              <h3>Prueba adaptada</h3>
+              <p>Versión lista para revisar, editar y descargar.</p>
+            </div>
+            <div class="button-row">
+              <button type="button" class="soft" id="downloadAdaptedTxt">Descargar .txt</button>
+              <button type="button" class="secondary" id="downloadAdaptedDoc">Descargar .doc</button>
+            </div>
+          </div>
+          <div id="adaptedContent" class="panel-content"></div>
+        </div>
+
+        <div id="tab-summary" class="tab-panel">
+          <div class="panel-top">
+            <div>
+              <h3>Resumen de cambios</h3>
+              <p>Vista rápida de lo que se ajustó en el instrumento.</p>
+            </div>
+            <div class="button-row">
+              <button type="button" class="soft" id="downloadSummaryTxt">Descargar .txt</button>
+              <button type="button" class="secondary" id="downloadSummaryDoc">Descargar .doc</button>
+            </div>
+          </div>
+          <div id="summaryContent" class="panel-content"></div>
+        </div>
+
+        <div id="tab-teacher" class="tab-panel">
+          <div class="panel-top">
+            <div>
+              <h3>Justificación docente</h3>
+              <p>Incluye tabla de cambios cuando la respuesta viene estructurada.</p>
+            </div>
+            <div class="button-row">
+              <button type="button" class="soft" id="downloadTeacherTxt">Descargar .txt</button>
+              <button type="button" class="secondary" id="downloadTeacherDoc">Descargar .doc</button>
+            </div>
+          </div>
+          <div id="teacherContent" class="panel-content"></div>
+        </div>
+      </div>
+    </section>
+
+    <p class="footer">Interfaz docente de AdaptaEval. La lógica de IA vive en el servidor, no en el computador del profesor.</p>
+  </main>
+
+<script>
+const state = {
+  results: {
+    adapted: "",
+    summary: "",
+    teacher: ""
+  }
+};
+
+const $ = (id) => document.getElementById(id);
+const els = {
+  subject: $("subject"),
+  course: $("course"),
+  learningGoal: $("learningGoal"),
+  studentProfile: $("studentProfile"),
+  evaluationText: $("evaluationText"),
+  teacherNote: $("teacherNote"),
+  globalMessage: $("globalMessage"),
+  loader: $("loader"),
+  resultsCard: $("resultsCard"),
+  resultMessage: $("resultMessage"),
+  adaptedContent: $("adaptedContent"),
+  summaryContent: $("summaryContent"),
+  teacherContent: $("teacherContent")
+};
+
+function cleanText(value) {
+  return String(value || "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\u00a0/g, " ")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function escapeHtml(text) {
+  return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function showMessage(text, type = "info", target = els.globalMessage) {
+  target.textContent = text;
+  target.className = `message show ${type}`;
+}
+
+function showLoader(on) {
+  els.loader.classList.toggle("show", on);
+}
+
+function selectedValues(containerId) {
+  return Array.from(document.querySelectorAll(`#${containerId} input:checked`)).map((item) => item.value);
+}
+
+function validateInput() {
+  if (!cleanText(els.studentProfile.value)) {
+    showMessage("Describe primero las NEE o el perfil del estudiante.", "warn");
+    return false;
+  }
+  if (!cleanText(els.evaluationText.value)) {
+    showMessage("Pega la prueba completa antes de generar la adaptación.", "warn");
+    return false;
+  }
+  return true;
+}
+
+function renderTeacherContent(payload) {
+  if (payload.teacher_rows && payload.teacher_rows.length) {
+    const rowsHtml = payload.teacher_rows.map((row) => `
+      <tr>
+        <td>${escapeHtml(row.cambio || "").replace(/\n/g, "<br>")}</td>
+        <td>${escapeHtml(row.justificacion || "").replace(/\n/g, "<br>")}</td>
+        <td>${escapeHtml(row.decreto || "").replace(/\n/g, "<br>")}</td>
+        <td>${escapeHtml(row.optimizacion || "").replace(/\n/g, "<br>")}</td>
+      </tr>
+    `).join("");
+    const noteHtml = payload.teacher_note
+      ? `<div class="note"><strong>Nota legal:</strong> ${escapeHtml(payload.teacher_note).replace(/\n/g, "<br>")}</div>`
+      : "";
+    els.teacherContent.innerHTML = `
+      <div class="teacher-table-wrap">
+        <table class="teacher-table">
+          <thead>
+            <tr>
+              <th>Cambio</th>
+              <th>Justificación</th>
+              <th>Decreto</th>
+              <th>Optimización</th>
+            </tr>
+          </thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+      ${noteHtml}
+    `;
+    return;
+  }
+
+  els.teacherContent.textContent = payload.teacher || "No fue posible reconstruir una justificación estructurada.";
+}
+
+function renderResults(payload) {
+  state.results.adapted = payload.adapted || "No se recibió una prueba adaptada válida.";
+  state.results.summary = payload.summary || "No se recibió un resumen de cambios válido.";
+  state.results.teacher = payload.teacher || "No se recibió una justificación docente válida.";
+
+  els.adaptedContent.innerHTML = formatAdaptedAssessment(state.results.adapted);
+  els.summaryContent.textContent = state.results.summary;
+  renderTeacherContent(payload);
+  els.resultsCard.hidden = false;
+
+  if (payload.warnings && payload.warnings.length) {
+    showMessage(payload.warnings.join(" "), "warn", els.resultMessage);
+  } else {
+    showMessage("Adaptación generada correctamente.", "success", els.resultMessage);
+  }
+
+  els.resultsCard.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function formatInlineMarkup(text) {
+  return escapeHtml(text).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+}
+
+function formatAdaptedAssessment(text) {
+  const cleaned = cleanText(text);
+  if (!cleaned) {
+    return '<div class="rendered-doc"><p>No se recibió una prueba adaptada válida.</p></div>';
+  }
+
+  const lines = cleaned.split("\n");
+  let html = '<div class="rendered-doc">';
+  let inList = false;
+
+  const closeList = () => {
+    if (inList) {
+      html += "</ol>";
+      inList = false;
+    }
+  };
+
+  lines.forEach((rawLine, index) => {
+    const line = rawLine.trim();
+
+    if (!line) {
+      closeList();
+      html += '<div class="doc-block"></div>';
+      return;
+    }
+
+    const headingMatch = line.match(/^\*\*(.+?)\*\*$/);
+    if (headingMatch) {
+      closeList();
+      const tagClass = index < 2 ? "doc-title" : "doc-subtitle";
+      html += `<div class="${tagClass}">${formatInlineMarkup(headingMatch[1])}</div>`;
+      return;
+    }
+
+    const listMatch = line.match(/^\d+[\)\.\-]\s*(.+)$/);
+    if (listMatch) {
+      if (!inList) {
+        html += '<ol class="doc-list">';
+        inList = true;
+      }
+      html += `<li>${formatInlineMarkup(listMatch[1])}</li>`;
+      return;
+    }
+
+    closeList();
+
+    if (/^[-*]\s+/.test(line)) {
+      html += `<p class="doc-line">${formatInlineMarkup(line.replace(/^[-*]\s+/, "• "))}</p>`;
+      return;
+    }
+
+    const emphasizedLabel = line.match(/^([A-Za-zÁÉÍÓÚáéíóúÑñ0-9\s\.]+:)\s*(.*)$/);
+    if (emphasizedLabel && emphasizedLabel[1].length < 45) {
+      const label = formatInlineMarkup(emphasizedLabel[1]);
+      const rest = formatInlineMarkup(emphasizedLabel[2]);
+      html += `<p class="doc-line"><strong>${label}</strong>${rest ? ` ${rest}` : ""}</p>`;
+      return;
+    }
+
+    html += `<p class="doc-line">${formatInlineMarkup(line)}</p>`;
+  });
+
+  closeList();
+  html += "</div>";
+  return html;
+}
+
+async function requestJson(url, options = {}) {
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.headers || {})
+    }
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.error || `HTTP ${response.status}`);
+  }
+  return data;
+}
+
+async function generateAdaptation() {
+  if (!validateInput()) return;
+
+  const payload = {
+    subject: cleanText(els.subject.value),
+    course: cleanText(els.course.value),
+    learningGoal: cleanText(els.learningGoal.value),
+    studentProfile: cleanText(els.studentProfile.value),
+    evaluationText: cleanText(els.evaluationText.value),
+    supports: selectedValues("supportChecks"),
+    teacherNote: cleanText(els.teacherNote.value)
+  };
+
+  showLoader(true);
+  showMessage("Generando adaptación...", "info");
+
+  try {
+    const data = await requestJson("/api/adapt", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+    renderResults(data);
+  } catch (error) {
+    showMessage(`No fue posible generar la adaptación. ${error.message}`, "error");
+  } finally {
+    showLoader(false);
+  }
+}
+
+async function verifyService() {
+  showMessage("Verificando servicio...", "info");
+  try {
+    const data = await requestJson("/api/health", { method: "GET", headers: {} });
+    const modelLabel = data.model ? ` Modelo: ${data.model}.` : "";
+    showMessage(`Servicio activo.${modelLabel}`, "success");
+  } catch (error) {
+    showMessage(`El servicio no está disponible todavía. ${error.message}`, "error");
+  }
+}
+
+function activateTab(name) {
+  document.querySelectorAll(".tab-btn").forEach((button) => {
+    button.classList.toggle("active", button.dataset.tab === name);
+  });
+  document.querySelectorAll(".tab-panel").forEach((panel) => {
+    panel.classList.toggle("active", panel.id === `tab-${name}`);
+  });
+}
+
+function downloadTextFile(filename, content, mime = "text/plain;charset=utf-8") {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function buildDocHtml(title, bodyHtml) {
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>${escapeHtml(title)}</title>
+<style>
+body{
+  font-family: Calibri, Arial, sans-serif;
+  color:#1f2f3f;
+  margin:36px;
+  line-height:1.6;
+  font-size:12pt;
+}
+.doc-header{
+  border-bottom:2px solid #1d4872;
+  padding-bottom:14px;
+  margin-bottom:22px;
+}
+.doc-brand{
+  font-size:11pt;
+  color:#48637d;
+  margin-bottom:4px;
+}
+.doc-title{
+  font-size:20pt;
+  font-weight:700;
+  color:#163b63;
+}
+.doc-subtitle{
+  font-size:15pt;
+  font-weight:700;
+  color:#18344f;
+  margin:18px 0 10px;
+}
+.doc-line{
+  margin:0 0 9px;
+}
+.doc-list{
+  margin:0 0 16px 24px;
+}
+.doc-list li{
+  margin:0 0 6px;
+}
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:10px;
+}
+th, td{
+  border:1px solid #cdd9e5;
+  padding:10px;
+  text-align:left;
+  vertical-align:top;
+}
+th{
+  background:#eaf1f8;
+  color:#173b63;
+}
+.note{
+  margin-top:14px;
+  padding:12px;
+  background:#fff7e8;
+  border:1px solid #ebcb77;
+}
+</style>
+</head>
+<body>
+  <div class="doc-header">
+    <div class="doc-brand">Instituto Hans Christian Andersen</div>
+    <div class="doc-title">${escapeHtml(title)}</div>
+  </div>
+  ${bodyHtml}
+</body>
+</html>`;
+}
+
+function downloadDocFile(filename, title, bodyHtml) {
+  downloadTextFile(filename, buildDocHtml(title, bodyHtml), "application/msword;charset=utf-8");
+}
+
+function summaryTextToHtml(text) {
+  const cleaned = cleanText(text);
+  const lines = cleaned.split("\n").map((line) => cleanText(line)).filter(Boolean);
+  if (!lines.length) return '<p class="doc-line">Sin contenido.</p>';
+
+  const bulletLines = lines.filter((line) => /^[-*•]/.test(line));
+  if (bulletLines.length >= Math.max(1, lines.length - 1)) {
+    const items = bulletLines.map((line) => `<li>${escapeHtml(line.replace(/^[-*•]\s*/, ""))}</li>`).join("");
+    return `<ol class="doc-list">${items}</ol>`;
+  }
+
+  return lines.map((line) => `<p class="doc-line">${escapeHtml(line)}</p>`).join("");
+}
+
+function teacherDocHtml() {
+  const table = els.teacherContent.querySelector("table");
+  if (table) {
+    return els.teacherContent.innerHTML;
+  }
+  return `<p class="doc-line">${escapeHtml(state.results.teacher)}</p>`;
+}
+
+$("generateBtn").addEventListener("click", generateAdaptation);
+$("healthBtn").addEventListener("click", verifyService);
+document.querySelectorAll(".tab-btn").forEach((button) => {
+  button.addEventListener("click", () => activateTab(button.dataset.tab));
+});
+
+$("downloadAdaptedTxt").addEventListener("click", () => downloadTextFile("prueba_adaptada.txt", state.results.adapted));
+$("downloadAdaptedDoc").addEventListener("click", () => downloadDocFile("prueba_adaptada.doc", "Prueba adaptada", els.adaptedContent.innerHTML));
+$("downloadSummaryTxt").addEventListener("click", () => downloadTextFile("resumen_cambios.txt", state.results.summary));
+$("downloadSummaryDoc").addEventListener("click", () => downloadDocFile("resumen_cambios.doc", "Resumen de cambios", summaryTextToHtml(state.results.summary)));
+$("downloadTeacherTxt").addEventListener("click", () => downloadTextFile("justificacion_docente.txt", state.results.teacher));
+$("downloadTeacherDoc").addEventListener("click", () => downloadDocFile("justificacion_docente.doc", "Justificación docente", teacherDocHtml()));
+</script>
+</body>
+</html>
