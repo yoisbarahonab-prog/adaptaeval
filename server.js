@@ -155,6 +155,18 @@ function declaresHundredPoints(text) {
   return /puntaje\s+total\s*:\s*100\b/.test(cleaned) || /total\s*:\s*100\s*puntos\b/.test(cleaned);
 }
 
+function hasUnfriendlyPointValues(text) {
+  const cleaned = cleanText(text);
+  if (!cleaned) return false;
+
+  const matches = cleaned.match(/\((\d+(?:\.\d+)?)\s*puntos?\)/gi) || [];
+  return matches.some((item) => {
+    const value = Number(String(item).replace(/[^\d.]/g, ""));
+    if (!Number.isFinite(value)) return false;
+    return !Number.isInteger(value) && Math.abs(value * 2 - Math.round(value * 2)) > 0.001;
+  });
+}
+
 function needsStructuralRebuild(originalText, adaptedText) {
   const reasons = [];
   const cleanedAdapted = cleanText(adaptedText);
@@ -179,6 +191,10 @@ function needsStructuralRebuild(originalText, adaptedText) {
 
   if (!declaresHundredPoints(cleanedAdapted)) {
     reasons.push("La adaptaciÃ³n no declara puntaje total de 100 puntos.");
+  }
+
+  if (hasUnfriendlyPointValues(cleanedAdapted)) {
+    reasons.push("La adaptación usa puntajes decimales poco escolares.");
   }
 
   return reasons;
@@ -278,6 +294,8 @@ Marco obligatorio:
 - La evaluacion adaptada final debe quedar en puntaje total de 100 puntos.
 - Si la prueba original trae otro puntaje, redistribuye los puntajes para que la version adaptada sume exactamente 100 puntos.
 - Debes escribir de forma visible "Puntaje total: 100 puntos" o equivalente directo dentro de la prueba adaptada.
+- Usa puntajes escolares limpios. Prefiere enteros y, solo si es estrictamente necesario, medios puntos (.5).
+- No uses decimales complejos como 6.25, 12.75, 18.75 u otros valores poco escolares.
 - Conserva la estructura general de la evaluacion original.
 - Conserva secciones, secuencia, numeracion y casi todos los items.
 - Mantiene el mismo orden de secciones, preguntas, subitems y alternativas de la prueba original siempre que sea posible.
@@ -762,6 +780,8 @@ Tarea:
 - La version final debe quedar en puntaje total de 100 puntos.
 - Si la prueba original usa otro puntaje, redistribuye los valores para cerrar en 100 puntos exactos.
 - Debes escribir de forma visible "Puntaje total: 100 puntos" o equivalente directo.
+- Usa puntajes escolares limpios. Prefiere enteros y, solo si es estrictamente necesario, medios puntos (.5).
+- No uses decimales complejos como 6.25, 12.75, 18.75 u otros valores poco escolares.
 - La prueba debe quedar completa hasta la ultima pregunta o ultimo subitem correspondiente.
 - Ajusta lenguaje, instrucciones, cantidad de apoyo y formato de respuesta segÃºn el perfil del estudiante.
 - Tu objetivo es adaptar el acceso a la misma evaluacion original, no crear una evaluacion nueva ni mas larga.
@@ -809,6 +829,8 @@ Reglas obligatorias:
 - La version final debe quedar en puntaje total de 100 puntos.
 - Si la prueba original usa otro puntaje, redistribuye los valores para cerrar en 100 puntos exactos.
 - Debes escribir de forma visible "Puntaje total: 100 puntos" o equivalente directo.
+- Usa puntajes escolares limpios. Prefiere enteros y, solo si es estrictamente necesario, medios puntos (.5).
+- No uses decimales complejos como 6.25, 12.75, 18.75 u otros valores poco escolares.
 - La prueba debe quedar completa hasta la ultima pregunta o ultimo subitem correspondiente.
 - Simplifica, clarifica y agrega apoyos, pero no mutiles la evaluaciÃ³n.
 - Tu objetivo es adaptar el acceso a la misma evaluacion original, no crear una evaluacion nueva ni mas larga.
@@ -865,6 +887,8 @@ Reglas obligatorias:
 - No agregues nuevas preguntas ni nuevos ejercicios.
 - Si agregas un ejemplo de apoyo, no debe tener numero ni puntaje.
 - La version final debe declarar "Puntaje total: 100 puntos".
+- Usa puntajes escolares limpios. Prefiere enteros y, solo si es estrictamente necesario, medios puntos (.5).
+- No uses decimales complejos como 6.25, 12.75, 18.75 u otros valores poco escolares.
 - La prueba debe quedar completa hasta la ultima pregunta original.
 - Si no fue solicitado por el docente, no agregues ejemplos.
 ${exampleInstruction}
@@ -1188,6 +1212,14 @@ const server = http.createServer(async (req, res) => {
             parsed = mergeAdaptedIntoParsed(parsed, rebuiltWithCoverage);
             parsed.warnings.unshift(`La adaptación omitía preguntas originales (${missingNumbers.join(", ")}) y se reconstruyó para recuperar la cobertura completa.`);
           }
+        }
+      }
+
+      if (parsed.adapted !== "No se recibiÃ³ una prueba adaptada vÃ¡lida.") {
+        const remainingMissingNumbers = missingQuestionNumbers(payload.evaluationText, parsed.adapted);
+        if (remainingMissingNumbers.length) {
+          parsed.adapted = "No se recibió una prueba adaptada válida.";
+          parsed.warnings.unshift(`La IA no logró conservar la evaluación completa. Faltan las preguntas: ${remainingMissingNumbers.join(", ")}.`);
         }
       }
 
