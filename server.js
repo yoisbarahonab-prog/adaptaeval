@@ -88,6 +88,12 @@ function normalizeSupportText(value) {
   return cleanText(value).toLowerCase();
 }
 
+function wantsInitialExample(payload) {
+  return Array.isArray(payload.supports) && payload.supports.some((item) => (
+    normalizeSupportText(item).includes("agregar ejemplo inicial")
+  ));
+}
+
 function estimateItemCount(text) {
   const cleaned = cleanText(text);
   if (!cleaned) return 0;
@@ -182,6 +188,9 @@ function buildPrompt(payload) {
   const supports = Array.isArray(payload.supports) && payload.supports.length
     ? payload.supports.map((item) => `- ${item}`).join("\n")
     : "- Usa adecuaciones razonables segÃºn el perfil del estudiante.";
+  const exampleInstruction = wantsInitialExample(payload)
+    ? '- Puedes agregar un ejemplo inicial breve de apoyo si ayuda al acceso. Ese ejemplo debe ser no evaluable, sin numeración propia y sin puntaje.'
+    : '- No agregues ejemplos iniciales, ejemplos resueltos ni apoyos en formato de ejemplo. Si no fue solicitado, están prohibidos.';
 
   return cleanText(`
 Eres un especialista en educaciÃ³n diferencial chilena, evaluaciÃ³n inclusiva y adecuaciones curriculares. Trabajas para el Instituto Hans Christian Andersen.
@@ -196,6 +205,7 @@ Marco obligatorio:
 - Debes entregar una prueba adaptada completa y usable.
 - Si la prueba original trae preguntas enumeradas, conserva esa numeraciÃ³n cuando sea Ãºtil.
 - Prioriza lenguaje claro, instrucciones paso a paso, formato accesible y ajustes proporcionales al perfil del estudiante.
+${exampleInstruction}
 
 Responde usando exactamente estos bloques y en este orden. No uses markdown adicional fuera de ellos:
 
@@ -250,6 +260,9 @@ function buildPromptStrict(payload) {
   const supports = Array.isArray(payload.supports) && payload.supports.length
     ? payload.supports.map((item) => `- ${item}`).join("\n")
     : "- Usa adecuaciones razonables segun el perfil del estudiante.";
+  const exampleInstruction = wantsInitialExample(payload)
+    ? '- Puedes agregar un ejemplo inicial breve de apoyo si ayuda al acceso. Ese ejemplo debe ser no evaluable, sin numeración propia y sin puntaje.'
+    : '- No agregues ejemplos iniciales, ejemplos resueltos ni apoyos en formato de ejemplo. Si no fue solicitado, están prohibidos.';
 
   return cleanText(`
 Eres un especialista en educacion diferencial chilena, evaluacion inclusiva y adecuaciones curriculares. Trabajas para el Instituto Hans Christian Andersen.
@@ -292,6 +305,7 @@ Marco obligatorio:
 - Antes de cerrar, verifica internamente que la prueba adaptada este completa, que conserve la cobertura de preguntas y que el puntaje total declarado sea 100 puntos.
 - Prioriza lenguaje claro, instrucciones paso a paso, formato accesible y ajustes proporcionales al perfil del estudiante.
 - Tu objetivo es adaptar el acceso a la misma evaluacion original, no crear una evaluacion nueva ni mas larga.
+${exampleInstruction}
 
 Responde usando exactamente estos bloques y en este orden. No uses markdown adicional fuera de ellos:
 
@@ -698,6 +712,9 @@ async function generateAdaptedOnly(payload, rawResponse) {
   const supports = Array.isArray(payload.supports) && payload.supports.length
     ? payload.supports.map((item) => `- ${item}`).join("\n")
     : "- Usa adecuaciones razonables segÃºn el perfil del estudiante.";
+  const exampleInstruction = wantsInitialExample(payload)
+    ? '- Puedes agregar un ejemplo inicial breve de apoyo si ayuda al acceso. Ese ejemplo debe ser no evaluable, sin numeración propia y sin puntaje.'
+    : '- No agregues ejemplos iniciales, ejemplos resueltos ni apoyos en formato de ejemplo. Si no fue solicitado, están prohibidos.';
 
   const prompt = cleanText(`
 Necesito solo la prueba adaptada completa, sin explicaciones ni texto adicional.
@@ -748,6 +765,7 @@ Tarea:
 - La prueba debe quedar completa hasta la ultima pregunta o ultimo subitem correspondiente.
 - Ajusta lenguaje, instrucciones, cantidad de apoyo y formato de respuesta segÃºn el perfil del estudiante.
 - Tu objetivo es adaptar el acceso a la misma evaluacion original, no crear una evaluacion nueva ni mas larga.
+${exampleInstruction}
 - No expliques los cambios.
 - No escribas resumen ni justificaciÃ³n.
 
@@ -761,6 +779,9 @@ async function regenerateWithStructureGuard(payload, currentAdapted) {
   const supports = Array.isArray(payload.supports) && payload.supports.length
     ? payload.supports.map((item) => `- ${item}`).join("\n")
     : "- Usa adecuaciones razonables segÃºn el perfil del estudiante.";
+  const exampleInstruction = wantsInitialExample(payload)
+    ? '- Puedes agregar un ejemplo inicial breve de apoyo si ayuda al acceso. Ese ejemplo debe ser no evaluable, sin numeración propia y sin puntaje.'
+    : '- No agregues ejemplos iniciales, ejemplos resueltos ni apoyos en formato de ejemplo. Si no fue solicitado, están prohibidos.';
 
   const prompt = cleanText(`
 Necesito rehacer una prueba adaptada porque quedÃ³ demasiado reducida.
@@ -791,6 +812,7 @@ Reglas obligatorias:
 - La prueba debe quedar completa hasta la ultima pregunta o ultimo subitem correspondiente.
 - Simplifica, clarifica y agrega apoyos, pero no mutiles la evaluaciÃ³n.
 - Tu objetivo es adaptar el acceso a la misma evaluacion original, no crear una evaluacion nueva ni mas larga.
+${exampleInstruction}
 - No escribas explicaciÃ³n, resumen ni justificaciÃ³n.
 
 Contexto:
@@ -824,6 +846,9 @@ async function regenerateWithMissingQuestionsGuard(payload, currentAdapted, miss
   const supports = Array.isArray(payload.supports) && payload.supports.length
     ? payload.supports.map((item) => `- ${item}`).join("\n")
     : "- Usa adecuaciones razonables segÃºn el perfil del estudiante.";
+  const exampleInstruction = wantsInitialExample(payload)
+    ? '- Puedes agregar un ejemplo inicial breve de apoyo si ayuda al acceso. Ese ejemplo debe ser no evaluable, sin numeración propia y sin puntaje.'
+    : '- No agregues ejemplos iniciales, ejemplos resueltos ni apoyos en formato de ejemplo. Si no fue solicitado, están prohibidos.';
 
   const prompt = cleanText(`
 Necesito corregir una prueba adaptada porque omitio preguntas de la version original.
@@ -841,6 +866,8 @@ Reglas obligatorias:
 - Si agregas un ejemplo de apoyo, no debe tener numero ni puntaje.
 - La version final debe declarar "Puntaje total: 100 puntos".
 - La prueba debe quedar completa hasta la ultima pregunta original.
+- Si no fue solicitado por el docente, no agregues ejemplos.
+${exampleInstruction}
 - No escribas resumen ni justificacion.
 
 Contexto:
