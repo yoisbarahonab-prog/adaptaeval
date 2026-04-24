@@ -167,6 +167,66 @@ function hasUnfriendlyPointValues(text) {
   });
 }
 
+function extractQuestionPointValues(text) {
+  const lines = cleanText(text).split("\n").map((line) => line.trim()).filter(Boolean);
+  return lines.flatMap((line) => {
+    const match = line.match(/^\(?\s*(?:Puntaje:\s*)?(\d+(?:\.\d+)?)\s*puntos?(?:\s+por.+)?\s*\)?$/i);
+    return match ? [Number(match[1])] : [];
+  });
+}
+
+function declaredSectionPointValues(text) {
+  const lines = cleanText(text).split("\n").map((line) => line.trim()).filter(Boolean);
+  return lines.flatMap((line) => {
+    const match = line.match(/^[IVX]+\.\s+.+\((\d+(?:\.\d+)?)\s*puntos?\)/i);
+    return match ? [Number(match[1])] : [];
+  });
+}
+
+function sumsToHundredWithQuestionPoints(text) {
+  const values = extractQuestionPointValues(text);
+  if (!values.length) return true;
+  const total = values.reduce((sum, value) => sum + value, 0);
+  return Math.abs(total - 100) < 0.001;
+}
+
+function hasSectionPointMismatch(text) {
+  const sectionValues = declaredSectionPointValues(text);
+  if (!sectionValues.length) return false;
+
+  const lines = cleanText(text).split("\n");
+  let currentSectionIndex = -1;
+  const perSectionQuestionTotals = [];
+
+  lines.forEach((rawLine) => {
+    const line = rawLine.trim();
+    if (!line) return;
+    const sectionMatch = line.match(/^[IVX]+\.\s+.+\((\d+(?:\.\d+)?)\s*puntos?\)/i);
+    if (sectionMatch) {
+      currentSectionIndex += 1;
+      perSectionQuestionTotals[currentSectionIndex] = 0;
+      return;
+    }
+
+    const pointMatch = line.match(/^\(?\s*(?:Puntaje:\s*)?(\d+(?:\.\d+)?)\s*puntos?(?:\s+por.+)?\s*\)?$/i);
+    if (pointMatch && currentSectionIndex >= 0) {
+      perSectionQuestionTotals[currentSectionIndex] += Number(pointMatch[1]);
+    }
+  });
+
+  return sectionValues.some((value, index) => Math.abs((perSectionQuestionTotals[index] || 0) - value) > 0.001);
+}
+
+function hasExcessiveOpenResponseArea(text) {
+  const cleaned = cleanText(text);
+  if (!cleaned) return false;
+
+  return cleaned
+    .split("\n")
+    .map((line) => line.trim())
+    .some((line) => line.length > 220 || /^[_*]{120,}$/.test(line));
+}
+
 function needsStructuralRebuild(originalText, adaptedText) {
   const reasons = [];
   const cleanedAdapted = cleanText(adaptedText);
@@ -193,8 +253,20 @@ function needsStructuralRebuild(originalText, adaptedText) {
     reasons.push("La adaptaciÃ³n no declara puntaje total de 100 puntos.");
   }
 
+  if (!sumsToHundredWithQuestionPoints(cleanedAdapted)) {
+    reasons.push("La suma real de los puntajes por pregunta no cierra en 100 puntos.");
+  }
+
+  if (hasSectionPointMismatch(cleanedAdapted)) {
+    reasons.push("Los puntajes declarados por sección no coinciden con los puntajes de sus preguntas.");
+  }
+
   if (hasUnfriendlyPointValues(cleanedAdapted)) {
     reasons.push("La adaptación usa puntajes decimales poco escolares.");
+  }
+
+  if (hasExcessiveOpenResponseArea(cleanedAdapted)) {
+    reasons.push("La adaptación dejó espacios de respuesta abiertos demasiado extensos.");
   }
 
   return reasons;
@@ -296,6 +368,8 @@ Marco obligatorio:
 - Debes escribir de forma visible "Puntaje total: 100 puntos" o equivalente directo dentro de la prueba adaptada.
 - Usa puntajes escolares limpios. Prefiere enteros y, solo si es estrictamente necesario, medios puntos (.5).
 - No uses decimales complejos como 6.25, 12.75, 18.75 u otros valores poco escolares.
+- La suma real de los puntajes por pregunta debe ser exactamente 100 puntos.
+- Los puntajes declarados por seccion deben coincidir con la suma de los puntajes de sus preguntas.
 - Conserva la estructura general de la evaluacion original.
 - Conserva secciones, secuencia, numeracion y casi todos los items.
 - Mantiene el mismo orden de secciones, preguntas, subitems y alternativas de la prueba original siempre que sea posible.
@@ -321,6 +395,8 @@ Marco obligatorio:
 - No elimines secciones completas salvo que sean claramente redundantes y puedas fusionarlas sin perder evidencia evaluativa.
 - No dejes la prueba a medias. La respuesta debe terminar con la ultima pregunta o ultimo subitem correspondiente a la prueba original.
 - Antes de cerrar, verifica internamente que la prueba adaptada este completa, que conserve la cobertura de preguntas y que el puntaje total declarado sea 100 puntos.
+- En preguntas abiertas, deja un espacio de respuesta escolar razonable: entre 3 y 5 lineas como maximo.
+- No generes bloques gigantes de lineas, guiones, subrayados o espacios de respuesta excesivos.
 - Prioriza lenguaje claro, instrucciones paso a paso, formato accesible y ajustes proporcionales al perfil del estudiante.
 - Tu objetivo es adaptar el acceso a la misma evaluacion original, no crear una evaluacion nueva ni mas larga.
 ${exampleInstruction}
@@ -782,7 +858,11 @@ Tarea:
 - Debes escribir de forma visible "Puntaje total: 100 puntos" o equivalente directo.
 - Usa puntajes escolares limpios. Prefiere enteros y, solo si es estrictamente necesario, medios puntos (.5).
 - No uses decimales complejos como 6.25, 12.75, 18.75 u otros valores poco escolares.
+- La suma real de los puntajes por pregunta debe ser exactamente 100 puntos.
+- Los puntajes declarados por seccion deben coincidir con la suma de los puntajes de sus preguntas.
 - La prueba debe quedar completa hasta la ultima pregunta o ultimo subitem correspondiente.
+- En preguntas abiertas, deja un espacio de respuesta escolar razonable: entre 3 y 5 lineas como maximo.
+- No generes bloques gigantes de lineas, guiones, subrayados o espacios de respuesta excesivos.
 - Ajusta lenguaje, instrucciones, cantidad de apoyo y formato de respuesta segÃºn el perfil del estudiante.
 - Tu objetivo es adaptar el acceso a la misma evaluacion original, no crear una evaluacion nueva ni mas larga.
 ${exampleInstruction}
@@ -831,7 +911,11 @@ Reglas obligatorias:
 - Debes escribir de forma visible "Puntaje total: 100 puntos" o equivalente directo.
 - Usa puntajes escolares limpios. Prefiere enteros y, solo si es estrictamente necesario, medios puntos (.5).
 - No uses decimales complejos como 6.25, 12.75, 18.75 u otros valores poco escolares.
+- La suma real de los puntajes por pregunta debe ser exactamente 100 puntos.
+- Los puntajes declarados por seccion deben coincidir con la suma de los puntajes de sus preguntas.
 - La prueba debe quedar completa hasta la ultima pregunta o ultimo subitem correspondiente.
+- En preguntas abiertas, deja un espacio de respuesta escolar razonable: entre 3 y 5 lineas como maximo.
+- No generes bloques gigantes de lineas, guiones, subrayados o espacios de respuesta excesivos.
 - Simplifica, clarifica y agrega apoyos, pero no mutiles la evaluaciÃ³n.
 - Tu objetivo es adaptar el acceso a la misma evaluacion original, no crear una evaluacion nueva ni mas larga.
 ${exampleInstruction}
@@ -889,7 +973,11 @@ Reglas obligatorias:
 - La version final debe declarar "Puntaje total: 100 puntos".
 - Usa puntajes escolares limpios. Prefiere enteros y, solo si es estrictamente necesario, medios puntos (.5).
 - No uses decimales complejos como 6.25, 12.75, 18.75 u otros valores poco escolares.
+- La suma real de los puntajes por pregunta debe ser exactamente 100 puntos.
+- Los puntajes declarados por seccion deben coincidir con la suma de los puntajes de sus preguntas.
 - La prueba debe quedar completa hasta la ultima pregunta original.
+- En preguntas abiertas, deja un espacio de respuesta escolar razonable: entre 3 y 5 lineas como maximo.
+- No generes bloques gigantes de lineas, guiones, subrayados o espacios de respuesta excesivos.
 - Si no fue solicitado por el docente, no agregues ejemplos.
 ${exampleInstruction}
 - No escribas resumen ni justificacion.
