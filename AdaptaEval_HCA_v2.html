@@ -409,6 +409,54 @@ label{
   font-size:.82rem;
   line-height:1.5;
 }
+.profile-helper{
+  display:grid;
+  gap:10px;
+  margin-top:2px;
+  padding:12px 14px;
+  border:1px solid rgba(36,75,135,.12);
+  border-radius:16px;
+  background:linear-gradient(180deg,#fffdf7,#fffaf0);
+}
+.profile-helper strong{
+  color:var(--brand-2);
+  font-size:.9rem;
+}
+.profile-helper p{
+  margin:0;
+  color:var(--muted);
+  font-size:.84rem;
+  line-height:1.5;
+}
+.profile-actions,
+.profile-examples{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.profile-chip{
+  appearance:none;
+  border:1px solid rgba(36,75,135,.14);
+  background:#fff;
+  color:var(--brand-2);
+  border-radius:999px;
+  padding:8px 12px;
+  font:inherit;
+  font-size:.84rem;
+  font-weight:600;
+  cursor:pointer;
+  transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+.profile-chip:hover{
+  transform:translateY(-1px);
+  border-color:rgba(36,75,135,.28);
+  box-shadow:0 8px 18px rgba(27,47,79,.08);
+}
+.profile-chip.secondary{
+  color:#6a5130;
+  border-color:rgba(242,195,67,.38);
+  background:#fff8e1;
+}
 input[type="text"], textarea, select{
   width:100%;
   padding:12px 14px;
@@ -750,6 +798,22 @@ button:disabled{
           <div class="field full">
             <label for="studentProfile">NEE o perfil del estudiante</label>
             <textarea id="studentProfile" placeholder="Ej.: TEL mixto, TDAH, TEA nivel 1, dificultades lectoras, rezago en comprensión, bajo umbral atencional, etc."></textarea>
+            <div class="profile-helper">
+              <strong>Ayuda rápida para completar este campo</strong>
+              <p>Si no sabes cómo redactarlo, toca un ejemplo y úsalo como base. Luego puedes agregar un detalle breve, como “necesita instrucciones cortas” o “requiere menos escritura”.</p>
+              <div class="profile-actions">
+                <button type="button" class="profile-chip secondary" data-profile-fill="base">Insertar perfil base</button>
+                <button type="button" class="profile-chip secondary" data-profile-fill="clear">Limpiar perfil</button>
+              </div>
+              <div class="profile-examples">
+                <button type="button" class="profile-chip" data-profile-example="TEA nivel 1, necesita instrucciones breves, lenguaje claro y menor sobrecarga verbal.">TEA nivel 1</button>
+                <button type="button" class="profile-chip" data-profile-example="TDAH, necesita instrucciones paso a paso, tiempos breves de trabajo y formato claro para sostener la atención.">TDAH</button>
+                <button type="button" class="profile-chip" data-profile-example="TEL mixto, necesita vocabulario simple, frases cortas y apoyo para comprender consignas.">TEL mixto</button>
+                <button type="button" class="profile-chip" data-profile-example="Dificultades lectoras, necesita menor carga verbal, apoyos escritos claros y preguntas más directas.">Dificultades lectoras</button>
+                <button type="button" class="profile-chip" data-profile-example="Rezago en comprensión, necesita consignas divididas en pasos, ejemplos breves y formato más guiado.">Rezago en comprensión</button>
+                <button type="button" class="profile-chip" data-profile-example="Bajo umbral atencional, necesita instrucciones concretas, menor distractor visual y secuencia clara de trabajo.">Bajo umbral atencional</button>
+              </div>
+            </div>
           </div>
           <div class="field full">
             <label for="evaluationText">Prueba original</label>
@@ -939,6 +1003,26 @@ function cleanText(value) {
     .trim();
 }
 
+function repairMojibake(text) {
+  return String(text || "")
+    .replace(/Ã¡/g, "á")
+    .replace(/Ã©/g, "é")
+    .replace(/Ã­/g, "í")
+    .replace(/Ã³/g, "ó")
+    .replace(/Ãº/g, "ú")
+    .replace(/Ã/g, "Á")
+    .replace(/Ã‰/g, "É")
+    .replace(/Ã/g, "Í")
+    .replace(/Ã“/g, "Ó")
+    .replace(/Ãš/g, "Ú")
+    .replace(/Ã±/g, "ñ")
+    .replace(/Ã‘/g, "Ñ")
+    .replace(/Â¿/g, "¿")
+    .replace(/Â¡/g, "¡")
+    .replace(/Â/g, "")
+    .replace(/â€¢/g, "•");
+}
+
 function escapeHtml(text) {
   return String(text)
     .replace(/&/g, "&amp;")
@@ -949,8 +1033,25 @@ function escapeHtml(text) {
 }
 
 function showMessage(text, type = "info", target = els.globalMessage) {
-  target.textContent = text;
+  target.textContent = repairMojibake(text);
   target.className = `message show ${type}`;
+}
+
+function summarizeWarnings(warnings) {
+  const joined = repairMojibake((warnings || []).join(" "));
+  if (!joined.trim()) return "";
+
+  if (/no logró conservar la evaluación completa|faltan las preguntas/i.test(joined)) {
+    return "La IA no logró conservar la evaluación completa. Revisa la salida o vuelve a intentar con una instrucción más precisa.";
+  }
+  if (/omitía preguntas originales|cobertura completa/i.test(joined)) {
+    return "La primera versión vino incompleta y fue corregida automáticamente para conservar toda la evaluación.";
+  }
+  if (/puntaje total de 100|puntajes decimales/i.test(joined)) {
+    return "La adaptación fue ajustada automáticamente para respetar el formato de evaluación del establecimiento.";
+  }
+
+  return joined;
 }
 
 function showLoader(on) {
@@ -1019,7 +1120,7 @@ function renderResults(payload) {
   els.resultsCard.hidden = false;
 
   if (payload.warnings && payload.warnings.length) {
-    showMessage(payload.warnings.join(" "), "warn", els.resultMessage);
+    showMessage(summarizeWarnings(payload.warnings), "warn", els.resultMessage);
   } else {
     showMessage("Adaptación generada correctamente.", "success", els.resultMessage);
   }
@@ -1261,7 +1362,44 @@ function teacherDocHtml() {
   return `<p class="doc-line">${escapeHtml(state.results.teacher)}</p>`;
 }
 
+function insertStudentProfile(text) {
+  const current = cleanText(els.studentProfile.value);
+  const next = cleanText(text);
+  if (!next) return;
+
+  if (!current) {
+    els.studentProfile.value = next;
+  } else if (!current.toLowerCase().includes(next.toLowerCase())) {
+    els.studentProfile.value = `${current} ${next}`.trim();
+  }
+
+  els.studentProfile.focus();
+}
+
+function installProfileHelpers() {
+  document.querySelectorAll("[data-profile-example]").forEach((button) => {
+    button.addEventListener("click", () => {
+      insertStudentProfile(button.dataset.profileExample || "");
+    });
+  });
+
+  document.querySelectorAll("[data-profile-fill]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const action = button.dataset.profileFill;
+      if (action === "base") {
+        els.studentProfile.value = "Estudiante con NEE. Necesita instrucciones claras, lenguaje simple y un formato de evaluación más accesible para demostrar su aprendizaje.";
+        els.studentProfile.focus();
+      }
+      if (action === "clear") {
+        els.studentProfile.value = "";
+        els.studentProfile.focus();
+      }
+    });
+  });
+}
+
 applyEditorialCopy();
+installProfileHelpers();
 
 $("generateBtn").addEventListener("click", generateAdaptation);
 $("healthBtn").addEventListener("click", verifyService);
