@@ -138,6 +138,12 @@ function highestQuestionNumber(text) {
   return numbers.length ? numbers[numbers.length - 1] : 0;
 }
 
+function missingQuestionNumbers(originalText, adaptedText) {
+  const originalNumbers = extractQuestionNumbers(originalText);
+  const adaptedNumbers = new Set(extractQuestionNumbers(adaptedText));
+  return originalNumbers.filter((number) => !adaptedNumbers.has(number));
+}
+
 function declaresHundredPoints(text) {
   const cleaned = cleanText(text).toLowerCase();
   return /puntaje\s+total\s*:\s*100\b/.test(cleaned) || /total\s*:\s*100\s*puntos\b/.test(cleaned);
@@ -156,6 +162,10 @@ function needsStructuralRebuild(originalText, adaptedText) {
   const adaptedHighest = highestQuestionNumber(cleanedAdapted);
   if (originalHighest >= 4 && adaptedHighest > 0 && adaptedHighest < originalHighest) {
     reasons.push("La adaptaciÃ³n no conservÃ³ la cobertura completa o casi completa de la numeraciÃ³n original.");
+  }
+  const missingNumbers = missingQuestionNumbers(originalText, cleanedAdapted);
+  if (missingNumbers.length) {
+    reasons.push(`La adaptación omitió las preguntas: ${missingNumbers.join(", ")}.`);
   }
   if (originalHighest > 0 && originalHighest <= 10 && adaptedHighest > originalHighest) {
     reasons.push("La adaptación agregó más preguntas que la prueba original.");
@@ -810,6 +820,56 @@ Responde solamente con la prueba adaptada final completa.
   return callGemini(prompt);
 }
 
+async function regenerateWithMissingQuestionsGuard(payload, currentAdapted, missingNumbers) {
+  const supports = Array.isArray(payload.supports) && payload.supports.length
+    ? payload.supports.map((item) => `- ${item}`).join("\n")
+    : "- Usa adecuaciones razonables segÃºn el perfil del estudiante.";
+
+  const prompt = cleanText(`
+Necesito corregir una prueba adaptada porque omitio preguntas de la version original.
+
+Preguntas obligatorias que faltan y deben aparecer en la salida final:
+${missingNumbers.map((number) => `- Pregunta ${number}`).join("\n")}
+
+Reglas obligatorias:
+- Reescribe la prueba adaptada completa, no solo las preguntas faltantes.
+- La salida final debe incluir explicitamente todas las preguntas originales, incluida cada pregunta faltante.
+- Debes mantener exactamente la misma cantidad total de preguntas que la prueba original si tiene 10 preguntas o menos.
+- Debes mantener el mismo orden y la misma numeracion de la prueba original.
+- No cambies signos, operaciones, datos numericos ni alternativas correctas.
+- No agregues nuevas preguntas ni nuevos ejercicios.
+- Si agregas un ejemplo de apoyo, no debe tener numero ni puntaje.
+- La version final debe declarar "Puntaje total: 100 puntos".
+- La prueba debe quedar completa hasta la ultima pregunta original.
+- No escribas resumen ni justificacion.
+
+Contexto:
+- Asignatura: ${cleanText(payload.subject) || "No informada"}
+- Curso: ${cleanText(payload.course) || "No informado"}
+- Objetivo de aprendizaje:
+${cleanText(payload.learningGoal) || "No informado"}
+
+- Perfil del estudiante / NEE:
+${cleanText(payload.studentProfile)}
+
+- Ajustes que se deben privilegiar:
+${supports}
+
+- ObservaciÃ³n docente:
+${cleanText(payload.teacherNote) || "Sin observaciÃ³n adicional."}
+
+Prueba original:
+${cleanText(payload.evaluationText)}
+
+VersiÃ³n adaptada incompleta:
+${cleanText(currentAdapted)}
+
+Responde solamente con la prueba adaptada final completa.
+  `);
+
+  return callGemini(prompt);
+}
+
 async function verifyGeminiKey() {
   if (!GEMINI_API_KEY) {
     throw new Error("Falta configurar GEMINI_API_KEY en el archivo .env.");
@@ -1090,6 +1150,17 @@ const server = http.createServer(async (req, res) => {
         if (cleanText(rebuiltAdapted)) {
           parsed = mergeAdaptedIntoParsed(parsed, rebuiltAdapted);
           parsed.warnings.unshift(`La primera adaptación tuvo problemas estructurales y se reconstruyó automáticamente. ${rebuildReasons.join(" ")}`);
+        }
+      }
+
+      if (parsed.adapted !== "No se recibiÃ³ una prueba adaptada vÃ¡lida.") {
+        const missingNumbers = missingQuestionNumbers(payload.evaluationText, parsed.adapted);
+        if (missingNumbers.length) {
+          const rebuiltWithCoverage = await regenerateWithMissingQuestionsGuard(payload, parsed.adapted, missingNumbers);
+          if (cleanText(rebuiltWithCoverage)) {
+            parsed = mergeAdaptedIntoParsed(parsed, rebuiltWithCoverage);
+            parsed.warnings.unshift(`La adaptación omitía preguntas originales (${missingNumbers.join(", ")}) y se reconstruyó para recuperar la cobertura completa.`);
+          }
         }
       }
 
