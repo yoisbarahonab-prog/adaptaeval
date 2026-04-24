@@ -3,18 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AdaptaEval | Version Docente</title>
+<title>AdaptaEval | Versión Docente</title>
 <style>
 :root{
-  --bg:#edf3f8;
+  --bg:#f5f7fb;
   --surface:#ffffff;
   --surface-soft:#f8fbfd;
-  --ink:#17344f;
-  --muted:#607387;
+  --ink:#183861;
+  --muted:#5e7187;
   --line:#d8e2ec;
-  --brand:#183b63;
-  --brand-2:#2c5d8f;
-  --gold:#caa24a;
+  --brand:#244b87;
+  --brand-2:#1d3c69;
+  --gold:#f2c343;
+  --brand-red:#ea2f16;
+  --brand-green:#0f5d34;
   --ok-bg:#eef8f1;
   --ok-line:#abd2b5;
   --ok-ink:#256941;
@@ -38,60 +40,68 @@ body{
   font-family:"Segoe UI",Tahoma,Geneva,Verdana,sans-serif;
   color:#223447;
   background:
-    radial-gradient(circle at top left, rgba(202,162,74,.12), transparent 24%),
-    radial-gradient(circle at right 20%, rgba(44,93,143,.08), transparent 22%),
-    linear-gradient(180deg,#f7fafc 0%, var(--bg) 100%);
+    radial-gradient(circle at top left, rgba(242,195,67,.18), transparent 24%),
+    radial-gradient(circle at right 20%, rgba(234,47,22,.08), transparent 22%),
+    radial-gradient(circle at 78% 82%, rgba(36,75,135,.08), transparent 18%),
+    linear-gradient(180deg,#fffdf8 0%, var(--bg) 100%);
 }
 
 .topbar{
   position:relative;
   overflow:hidden;
   background:
-    radial-gradient(circle at 85% 20%, rgba(255,255,255,.12), transparent 18%),
-    radial-gradient(circle at 12% 18%, rgba(202,162,74,.18), transparent 14%),
-    linear-gradient(135deg,#123250 0%, #1d4872 52%, #2f6297 100%);
-  color:#fff;
+    linear-gradient(180deg, rgba(255,255,255,.98), rgba(255,255,255,.98)),
+    linear-gradient(135deg,#fff 0%, #f8fafc 100%);
+  color:var(--ink);
+  border-bottom:1px solid rgba(36,75,135,.08);
 }
 .topbar::before,
 .topbar::after{
   content:"";
   position:absolute;
-  border-radius:999px;
   pointer-events:none;
 }
 .topbar::before{
-  width:340px;
-  height:340px;
-  right:-120px;
-  top:-120px;
-  background:radial-gradient(circle, rgba(255,255,255,.12), transparent 68%);
+  left:0;
+  right:0;
+  bottom:0;
+  height:12px;
+  background:linear-gradient(90deg, var(--brand-red) 0 52%, var(--gold) 52% 70%, var(--brand) 70% 86%, var(--brand-green) 86% 100%);
 }
 .topbar::after{
-  width:260px;
-  height:260px;
-  left:-80px;
-  bottom:-110px;
-  background:radial-gradient(circle, rgba(202,162,74,.16), transparent 70%);
+  width:280px;
+  height:280px;
+  right:-80px;
+  top:-120px;
+  border-radius:50%;
+  background:radial-gradient(circle, rgba(242,195,67,.18), transparent 68%);
 }
 .topbar-inner{
   position:relative;
   max-width:1160px;
   margin:0 auto;
-  padding:34px 24px 116px;
+  padding:30px 24px 104px;
   display:flex;
   gap:22px;
-  align-items:flex-start;
+  align-items:center;
 }
 .brand-mark{
-  width:78px;
-  height:78px;
-  border-radius:24px;
-  display:grid;
-  place-items:center;
-  border:1px solid rgba(255,255,255,.22);
-  background:linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.08));
-  box-shadow:0 18px 36px rgba(10,25,42,.18);
+  width:108px;
+  height:108px;
+  border-radius:28px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border:1px solid rgba(36,75,135,.08);
+  background:linear-gradient(180deg,#fff,#fff7df);
+  box-shadow:0 18px 36px rgba(26,42,63,.12);
   flex:none;
+  padding:10px;
+}
+.brand-mark img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
 }
 .eyebrow{
   display:inline-flex;
@@ -100,9 +110,9 @@ body{
   margin:2px 0 10px;
   padding:7px 12px;
   border-radius:999px;
-  background:rgba(255,255,255,.12);
-  border:1px solid rgba(255,255,255,.18);
-  color:rgba(255,255,255,.84);
+  background:rgba(242,195,67,.18);
+  border:1px solid rgba(234,47,22,.12);
+  color:var(--brand-2);
   font-size:.78rem;
   letter-spacing:.08em;
   text-transform:uppercase;
@@ -111,10 +121,11 @@ body{
   margin:0;
   font-size:clamp(2.1rem,4.2vw,3.4rem);
   letter-spacing:-.04em;
+  color:var(--brand);
 }
 .title p{
   margin:14px 0 0;
-  color:rgba(255,255,255,.9);
+  color:#4e6179;
   line-height:1.75;
   max-width:720px;
   font-size:1.12rem;
@@ -133,11 +144,11 @@ body{
   gap:8px;
   padding:9px 14px;
   border-radius:999px;
-  border:1px solid rgba(255,255,255,.18);
-  background:rgba(255,255,255,.1);
-  backdrop-filter:blur(10px);
+  border:1px solid rgba(36,75,135,.12);
+  background:rgba(255,255,255,.84);
   font-size:.82rem;
-  color:rgba(255,255,255,.92);
+  color:var(--brand-2);
+  box-shadow:0 8px 18px rgba(26,42,63,.06);
 }
 .pill svg{
   opacity:.92;
@@ -145,7 +156,7 @@ body{
 
 .shell{
   max-width:1160px;
-  margin:-72px auto 0;
+  margin:-56px auto 0;
   padding:24px;
   display:grid;
   gap:18px;
@@ -177,10 +188,10 @@ body{
 .hero-note{
   position:relative;
   padding:24px 24px 24px 28px;
-  border:1px solid rgba(202,162,74,.34);
+  border:1px solid rgba(242,195,67,.34);
   background:
-    linear-gradient(180deg, rgba(255,255,255,.98), rgba(250,252,255,.98)),
-    linear-gradient(90deg, rgba(202,162,74,.18), transparent);
+    linear-gradient(180deg, rgba(255,255,255,.98), rgba(255,249,236,.96)),
+    linear-gradient(90deg, rgba(242,195,67,.18), transparent);
 }
 .hero-note::before{
   content:"";
@@ -190,7 +201,7 @@ body{
   bottom:18px;
   width:5px;
   border-radius:999px;
-  background:linear-gradient(180deg, var(--gold), #e0bc68);
+  background:linear-gradient(180deg, var(--brand-red), var(--gold));
 }
 .hero-note strong{
   display:block;
@@ -237,7 +248,7 @@ body{
   pointer-events:none;
 }
 .step:nth-child(1)::after{
-  background:radial-gradient(circle, #2c5d8f 0%, transparent 70%);
+  background:radial-gradient(circle, #ea2f16 0%, transparent 70%);
 }
 .step:nth-child(2){
   background:linear-gradient(180deg,#ffffff,#fdfaf4);
@@ -249,16 +260,25 @@ body{
   background:linear-gradient(180deg,#ffffff,#f6fbf8);
 }
 .step:nth-child(3)::after{
-  background:radial-gradient(circle, #5f8f72 0%, transparent 70%);
+  background:radial-gradient(circle, #244b87 0%, transparent 70%);
 }
 .step strong{
   display:flex;
-  gap:10px;
-  align-items:center;
+  gap:14px;
+  align-items:flex-start;
   color:var(--ink);
-  margin-bottom:10px;
+  margin-bottom:12px;
   font-size:1.02rem;
   line-height:1.35;
+}
+.step:nth-child(1) strong{
+  color:#b52c1a;
+}
+.step:nth-child(2) strong{
+  color:#9a6f12;
+}
+.step:nth-child(3) strong{
+  color:#244b87;
 }
 .step span{
   display:block;
@@ -277,35 +297,65 @@ body{
   box-shadow:0 10px 22px rgba(20,48,78,.08);
 }
 .step:nth-child(1) .step-icon{
-  color:#2c5d8f;
-  background:linear-gradient(180deg, rgba(44,93,143,.12), rgba(44,93,143,.04));
+  color:#c32711;
+  background:linear-gradient(180deg, rgba(234,47,22,.14), rgba(234,47,22,.05));
 }
 .step:nth-child(2) .step-icon{
   color:#9b7829;
   background:linear-gradient(180deg, rgba(202,162,74,.18), rgba(202,162,74,.05));
 }
 .step:nth-child(3) .step-icon{
-  color:#3f7758;
-  background:linear-gradient(180deg, rgba(95,143,114,.16), rgba(95,143,114,.05));
+  color:#244b87;
+  background:linear-gradient(180deg, rgba(36,75,135,.16), rgba(36,75,135,.05));
 }
 .step-copy{
   display:grid;
-  gap:3px;
+  gap:2px;
+  padding-top:2px;
 }
 .badge{
-  width:38px;
-  height:38px;
-  border-radius:50%;
-  background:linear-gradient(135deg,#f0c86a 0%, #c99728 100%);
-  color:#17344f;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  font-size:1rem;
-  font-weight:800;
-  border:1px solid rgba(255,255,255,.7);
-  box-shadow:0 10px 20px rgba(138,100,26,.22);
-  flex:0 0 38px;
+  display:block;
+  min-width:58px;
+  color:#d5321e;
+  font-size:2.35rem;
+  line-height:.88;
+  font-weight:900;
+  flex:0 0 auto;
+  text-shadow:0 3px 10px rgba(213,50,30,.12);
+  letter-spacing:-.05em;
+}
+.step:nth-child(1) .badge{
+  color:#d5321e;
+  text-shadow:0 3px 10px rgba(213,50,30,.14);
+}
+.step:nth-child(2) .badge{
+  color:#c69318;
+  text-shadow:0 3px 10px rgba(198,147,24,.16);
+}
+.step:nth-child(3) .badge{
+  color:#244b87;
+  text-shadow:0 3px 10px rgba(36,75,135,.14);
+}
+.badge::before{
+  content:"0";
+}
+.badge::after{
+  content:"/";
+  display:block;
+  margin-top:3px;
+  color:rgba(36,75,135,.26);
+  font-size:1.15rem;
+  font-weight:700;
+  line-height:1;
+}
+.step:nth-child(1) .badge::after{
+  color:rgba(213,50,30,.28);
+}
+.step:nth-child(2) .badge::after{
+  color:rgba(198,147,24,.32);
+}
+.step:nth-child(3) .badge::after{
+  color:rgba(36,75,135,.28);
 }
 
 .grid{
@@ -606,11 +656,8 @@ button:disabled{
 <body>
   <header class="topbar">
     <div class="topbar-inner">
-      <div class="brand-mark" aria-hidden="true">
-        <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
-          <path d="M6 4h9a3 3 0 0 1 3 3v13l-4-2-4 2-4-2-4 2V7a3 3 0 0 1 3-3h1Z" stroke="white" stroke-width="1.7" stroke-linejoin="round"/>
-          <path d="M8 8h6M8 12h7" stroke="white" stroke-width="1.7" stroke-linecap="round"/>
-        </svg>
+      <div class="brand-mark">
+        <img src="HCAOFICIAL1.png" alt="Escudo Instituto Hans Christian Andersen">
       </div>
       <div class="title">
         <div class="eyebrow">Instituto Hans Christian Andersen</div>
@@ -619,7 +666,7 @@ button:disabled{
       </div>
       <div class="pills">
         <span class="pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v18M3 12h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Uso docente</span>
-        <span class="pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 18h16M6 15l3-4 3 2 5-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Adecuacion evaluativa</span>
+        <span class="pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 18h16M6 15l3-4 3 2 5-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Adecuación evaluativa</span>
         <span class="pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 4h7l3 3v13H7z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 4v3h3" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>Decreto 83/2015</span>
         <span class="pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 7h14M7 4h10v16H7z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 11h6M9 15h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Decreto 67/2018</span>
       </div>
@@ -629,21 +676,21 @@ button:disabled{
   <main class="shell">
     <section class="card hero-note">
       <strong>Una herramienta pensada para el trabajo real del docente.</strong>
-      <p>Pega la evaluacion original, describe el perfil del estudiante y obten una version adaptada, ordenada y lista para revisar, con respaldo pedagogico para su uso en el aula.</p>
+      <p>Pega la evaluación original, describe el perfil del estudiante y obtén una versión adaptada, ordenada y lista para revisar, con respaldo pedagógico para su uso en el aula.</p>
     </section>
 
     <section class="steps">
       <article class="step">
         <strong><span class="badge">1</span><span class="step-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M6 4h9a3 3 0 0 1 3 3v13l-4-2-4 2-4-2-4 2V7a3 3 0 0 1 3-3h1Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M8 8h6M8 12h7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span><span class="step-copy">Ingresa la evaluación</span></strong>
-        <span>Trabaja sobre el texto real del instrumento para conservar mejor su estructura, intencion y evidencia de aprendizaje.</span>
+        <span>Trabaja sobre el texto real del instrumento para conservar mejor su estructura, intención y evidencia de aprendizaje.</span>
       </article>
       <article class="step">
         <strong><span class="badge">2</span><span class="step-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 4a4 4 0 1 1 0 8a4 4 0 0 1 0-8Z" stroke="currentColor" stroke-width="1.7"/><path d="M5 20a7 7 0 0 1 14 0" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span><span class="step-copy">Define apoyos clave</span></strong>
-        <span>Indica las NEE, barreras de acceso y apoyos pedagogicos que deben priorizarse en la adecuacion.</span>
+        <span>Indica las NEE, barreras de acceso y apoyos pedagógicos que deben priorizarse en la adecuación.</span>
       </article>
       <article class="step">
         <strong><span class="badge">3</span><span class="step-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 12h5l2 3 3-6 2 3h2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 6h16v12H4z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span><span class="step-copy">Revisa la propuesta</span></strong>
-        <span>Obten una prueba adaptada, un resumen de cambios y una justificacion docente en un formato claro y descargable.</span>
+        <span>Obtén una prueba adaptada, un resumen de cambios y una justificación docente en un formato claro y descargable.</span>
       </article>
     </section>
 
@@ -652,17 +699,17 @@ button:disabled{
     <section class="card">
       <div class="card-header">
         <h2>Generar prueba adaptada</h2>
-        <p>Completa los datos esenciales para obtener una adaptacion fiel a la evaluacion original, organizada con claridad y ajustada a 100 puntos.</p>
+        <p>Completa los datos esenciales para obtener una adaptación fiel a la evaluación original, organizada con claridad y ajustada a 100 puntos.</p>
       </div>
       <div class="card-body">
         <div class="grid">
           <div class="field">
             <label for="subject">Asignatura</label>
-            <input id="subject" type="text" placeholder="Opcional. Ej.: Lenguaje, Matematica, Historia">
+            <input id="subject" type="text" placeholder="Opcional. Ej.: Lenguaje, Matemática, Historia">
           </div>
           <div class="field">
             <label for="course">Curso</label>
-            <input id="course" type="text" placeholder="Opcional. Ej.: 5 Basico, 1 Medio">
+            <input id="course" type="text" placeholder="Opcional. Ej.: 5 Básico, 1 Medio">
           </div>
           <div class="field full">
             <label for="learningGoal">Objetivo de aprendizaje</label>
@@ -670,29 +717,29 @@ button:disabled{
           </div>
           <div class="field full">
             <label for="studentProfile">NEE o perfil del estudiante</label>
-            <textarea id="studentProfile" placeholder="Ej.: TEL mixto, TDAH, TEA nivel 1, dificultades lectoras, rezago en comprension, bajo umbral atencional, etc."></textarea>
+            <textarea id="studentProfile" placeholder="Ej.: TEL mixto, TDAH, TEA nivel 1, dificultades lectoras, rezago en comprensión, bajo umbral atencional, etc."></textarea>
           </div>
           <div class="field full">
             <label for="evaluationText">Prueba original</label>
             <textarea id="evaluationText" placeholder="Pega aqui la prueba completa: instrucciones, preguntas, alternativas, encabezados, puntajes y cualquier parte que quieras adaptar."></textarea>
-            <div class="hint">Para mejores resultados, pega el texto completo. Si hoy solo trabajas con archivo, conviértelo primero a texto para que la adaptación sea precisa. AdaptaEval ajustara la version final para que quede en 100 puntos y tratara de respetar el orden, la numeracion y el formato base de la prueba original.</div>
+            <div class="hint">Para mejores resultados, pega el texto completo. Si hoy solo trabajas con archivo, conviértelo primero a texto para que la adaptación sea precisa. AdaptaEval ajustará la versión final para que quede en 100 puntos y tratará de respetar el orden, la numeración y el formato base de la prueba original.</div>
           </div>
           <div class="field full">
             <label>Ajustes que deseas privilegiar</label>
             <div class="checks" id="supportChecks">
               <label class="check"><input type="checkbox" value="Simplificar lenguaje"><span>Simplificar lenguaje</span></label>
               <label class="check"><input type="checkbox" value="Dividir consignas en pasos"><span>Dividir consignas en pasos</span></label>
-              <label class="check"><input type="checkbox" value="Reducir cantidad de items de forma moderada"><span>Reducir cantidad de items de forma moderada</span></label>
+              <label class="check"><input type="checkbox" value="Reducir cantidad de ítems de forma moderada"><span>Reducir cantidad de ítems de forma moderada</span></label>
               <label class="check"><input type="checkbox" value="Agregar apoyos visuales escritos"><span>Agregar apoyos visuales escritos</span></label>
               <label class="check"><input type="checkbox" value="Disminuir carga de escritura"><span>Disminuir carga de escritura</span></label>
-              <label class="check"><input type="checkbox" value="Hacer alternativas mas claras"><span>Hacer alternativas mas claras</span></label>
+              <label class="check"><input type="checkbox" value="Hacer alternativas más claras"><span>Hacer alternativas más claras</span></label>
               <label class="check"><input type="checkbox" value="Agregar ejemplo inicial"><span>Agregar ejemplo inicial</span></label>
-              <label class="check"><input type="checkbox" value="Mantener exigencia con acceso mas claro"><span>Mantener exigencia con acceso mas claro</span></label>
+              <label class="check"><input type="checkbox" value="Mantener exigencia con acceso más claro"><span>Mantener exigencia con acceso más claro</span></label>
             </div>
-            <div class="hint">La reduccion de items debe ser parcial. La plataforma debe respetar la estructura de la evaluacion y evitar dejarla reducida a una sola pregunta.</div>
+            <div class="hint">La reducción de ítems debe ser parcial. La plataforma debe respetar la estructura de la evaluación y evitar dejarla reducida a una sola pregunta.</div>
           </div>
           <div class="field full">
-            <label for="teacherNote">Observacion docente</label>
+            <label for="teacherNote">Observación docente</label>
             <textarea id="teacherNote" placeholder="Opcional. Ej.: necesito mantener el nivel de exigencia, reducir escritura, clarificar instrucciones o conservar la estructura de la prueba."></textarea>
           </div>
         </div>
@@ -812,42 +859,42 @@ function applyEditorialCopy() {
   const footer = document.querySelector(".footer");
 
   if (heroTitle) heroTitle.textContent = "Una herramienta pensada para el trabajo real del docente.";
-  if (heroText) heroText.textContent = "Pega la evaluacion original, describe el perfil del estudiante y obten una version adaptada, ordenada y lista para revisar, con respaldo pedagogico para su uso en el aula.";
+  if (heroText) heroText.textContent = "Pega la evaluación original, describe el perfil del estudiante y obtén una versión adaptada, ordenada y lista para revisar, con respaldo pedagógico para su uso en el aula.";
 
   if (steps[0]) {
     const title = steps[0].querySelector("strong");
     const text = steps[0].querySelector("span");
-    if (title) title.innerHTML = '<span class="badge">1</span>Ingresa la evaluacion';
-    if (text) text.textContent = "Trabaja sobre el texto real del instrumento para conservar mejor su estructura, intencion y evidencia de aprendizaje.";
+    if (title) title.innerHTML = '<span class="badge">1</span>Ingresa la evaluación';
+    if (text) text.textContent = "Trabaja sobre el texto real del instrumento para conservar mejor su estructura, intención y evidencia de aprendizaje.";
   }
 
   if (steps[1]) {
     const title = steps[1].querySelector("strong");
     const text = steps[1].querySelector("span");
     if (title) title.innerHTML = '<span class="badge">2</span>Define apoyos clave';
-    if (text) text.textContent = "Indica las NEE, barreras de acceso y apoyos pedagogicos que deben priorizarse en la adecuacion.";
+    if (text) text.textContent = "Indica las NEE, barreras de acceso y apoyos pedagógicos que deben priorizarse en la adecuación.";
   }
 
   if (steps[2]) {
     const title = steps[2].querySelector("strong");
     const text = steps[2].querySelector("span");
     if (title) title.innerHTML = '<span class="badge">3</span>Revisa la propuesta';
-    if (text) text.textContent = "Obten una prueba adaptada, un resumen de cambios y una justificacion docente en un formato claro y descargable.";
+    if (text) text.textContent = "Obtén una prueba adaptada, un resumen de cambios y una justificación docente en un formato claro y descargable.";
   }
 
   if (evaluationHint) {
-    evaluationHint.textContent = "Para mejores resultados, pega el texto completo. La adaptacion final buscara respetar el orden, la numeracion, el formato base y la distribucion total de 100 puntos.";
+    evaluationHint.textContent = "Para mejores resultados, pega el texto completo. La adaptación final buscará respetar el orden, la numeración, el formato base y la distribución total de 100 puntos.";
   }
 
-  if (loaderTitle) loaderTitle.textContent = "AdaptaEval esta preparando la adaptacion";
-  if (loaderItems[0]) loaderItems[0].textContent = "Organizando el encargo pedagogico.";
-  if (loaderItems[1]) loaderItems[1].textContent = "Construyendo la nueva evaluacion adaptada.";
-  if (loaderItems[2]) loaderItems[2].textContent = "Ordenando el resumen de cambios y la justificacion docente.";
+  if (loaderTitle) loaderTitle.textContent = "AdaptaEval está preparando la adaptación";
+  if (loaderItems[0]) loaderItems[0].textContent = "Organizando el encargo pedagógico.";
+  if (loaderItems[1]) loaderItems[1].textContent = "Construyendo la nueva evaluación adaptada.";
+  if (loaderItems[2]) loaderItems[2].textContent = "Ordenando el resumen de cambios y la justificación docente.";
 
-  if (resultsIntro) resultsIntro.textContent = "La adaptacion queda organizada en secciones claras y lista para revisar o descargar.";
-  if (adaptedIntro) adaptedIntro.textContent = "Version lista para revisar, ajustar si es necesario y descargar.";
-  if (summaryIntro) summaryIntro.textContent = "Sintesis clara de los ajustes realizados en la evaluacion.";
-  if (teacherIntro) teacherIntro.textContent = "Respaldo pedagogico para acompanar la adecuacion realizada.";
+  if (resultsIntro) resultsIntro.textContent = "La adaptación queda organizada en secciones claras y lista para revisar o descargar.";
+  if (adaptedIntro) adaptedIntro.textContent = "Versión lista para revisar, ajustar si es necesario y descargar.";
+  if (summaryIntro) summaryIntro.textContent = "Síntesis clara de los ajustes realizados en la evaluación.";
+  if (teacherIntro) teacherIntro.textContent = "Respaldo pedagógico para acompañar la adecuación realizada.";
   if (footer) footer.textContent = "AdaptaEval | Apoyo docente para adecuaciones evaluativas del Instituto Hans Christian Andersen.";
 }
 
