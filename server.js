@@ -157,6 +157,9 @@ function needsStructuralRebuild(originalText, adaptedText) {
   if (originalHighest >= 4 && adaptedHighest > 0 && adaptedHighest < originalHighest) {
     reasons.push("La adaptaciÃ³n no conservÃ³ la cobertura completa o casi completa de la numeraciÃ³n original.");
   }
+  if (originalHighest > 0 && originalHighest <= 10 && adaptedHighest > originalHighest) {
+    reasons.push("La adaptación agregó más preguntas que la prueba original.");
+  }
 
   if (!declaresHundredPoints(cleanedAdapted)) {
     reasons.push("La adaptaciÃ³n no declara puntaje total de 100 puntos.");
@@ -260,6 +263,17 @@ Marco obligatorio:
 - No cambies signos, operaciones, datos numericos, alternativas correctas ni contenido matematico de la prueba original, salvo que el cambio sea solo de redaccion o apoyo para hacerla mas accesible.
 - Si una pregunta original usa suma, resta, multiplicacion o division, la adaptacion debe mantener esa misma operacion.
 - Si la prueba original tiene 10 preguntas o menos, conserva todas las preguntas. Solo simplifica redaccion, formato, apoyos e instrucciones.
+- Si la prueba original tiene 10 preguntas o menos, conserva exactamente la misma cantidad total de preguntas.
+- No agregues nuevas preguntas, nuevos ejercicios, nuevos items, nuevos subitems ni nuevas alternativas, salvo que el docente lo pida de forma explicita.
+- No expandas artificialmente la evaluacion para completarla o mejorarla.
+- La adaptacion debe trabajar sobre la prueba original existente, no convertirla en una prueba distinta.
+- Puedes agregar apoyos de acceso, pero no nuevos reactivos evaluables.
+- Los apoyos permitidos son: reformulacion de instrucciones, division en pasos, aclaracion de vocabulario, apoyos visuales escritos, espacio de respuesta mas claro y un ejemplo breve no evaluable antes de una pregunta.
+- Si agregas un ejemplo, debe ser solo de apoyo, no debe llevar numeracion propia, no debe tener puntaje y no debe contarse como una nueva pregunta.
+- Mantén exactamente las mismas secciones de la prueba original.
+- Mantén el mismo orden de las preguntas.
+- Mantén la numeración original de la prueba.
+- No agregues preguntas para compensar una reducción.
 - Si el docente pide reducir cantidad de items, haz una reduccion moderada, no extrema.
 - Nunca transformes una evaluacion de varias preguntas en una sola pregunta o en un solo ejercicio.
 - Si la prueba original tiene 5 o mas items o preguntas, la version adaptada debe mantener al menos 3 y normalmente 60% o mas de los items.
@@ -267,6 +281,7 @@ Marco obligatorio:
 - No dejes la prueba a medias. La respuesta debe terminar con la ultima pregunta o ultimo subitem correspondiente a la prueba original.
 - Antes de cerrar, verifica internamente que la prueba adaptada este completa, que conserve la cobertura de preguntas y que el puntaje total declarado sea 100 puntos.
 - Prioriza lenguaje claro, instrucciones paso a paso, formato accesible y ajustes proporcionales al perfil del estudiante.
+- Tu objetivo es adaptar el acceso a la misma evaluacion original, no crear una evaluacion nueva ni mas larga.
 
 Responde usando exactamente estos bloques y en este orden. No uses markdown adicional fuera de ellos:
 
@@ -706,6 +721,13 @@ Tarea:
 - Respeta la numeracion original. Si debes renumerar, hazlo de forma correlativa, limpia y sin saltos.
 - Mantiene un formato lo mas parecido posible al original.
 - Si la prueba original tiene 10 preguntas o menos, conserva todas las preguntas.
+- Si la prueba original tiene 10 preguntas o menos, conserva exactamente la misma cantidad total de preguntas.
+- No agregues nuevas preguntas, nuevos ejercicios, nuevos items, nuevos subitems ni nuevas alternativas, salvo que el docente lo pida de forma explicita.
+- No expandas artificialmente la evaluacion para completarla o mejorarla.
+- La adaptacion debe trabajar sobre la prueba original existente, no convertirla en una prueba distinta.
+- Puedes agregar apoyos de acceso, pero no nuevos reactivos evaluables.
+- Los apoyos permitidos son: reformulacion de instrucciones, division en pasos, aclaracion de vocabulario, apoyos visuales escritos, espacio de respuesta mas claro y un ejemplo breve no evaluable antes de una pregunta.
+- Si agregas un ejemplo, debe ser solo de apoyo, no debe llevar numeracion propia, no debe tener puntaje y no debe contarse como una nueva pregunta.
 - No cambies signos, operaciones, datos numericos ni alternativas correctas de la prueba original.
 - Si una pregunta original usa suma, resta, multiplicacion o division, la adaptacion debe mantener esa misma operacion.
 - Si se pidiÃ³ reducir cantidad de items, reduce solo de forma moderada.
@@ -715,6 +737,7 @@ Tarea:
 - Debes escribir de forma visible "Puntaje total: 100 puntos" o equivalente directo.
 - La prueba debe quedar completa hasta la ultima pregunta o ultimo subitem correspondiente.
 - Ajusta lenguaje, instrucciones, cantidad de apoyo y formato de respuesta segÃºn el perfil del estudiante.
+- Tu objetivo es adaptar el acceso a la misma evaluacion original, no crear una evaluacion nueva ni mas larga.
 - No expliques los cambios.
 - No escribas resumen ni justificaciÃ³n.
 
@@ -740,6 +763,13 @@ Reglas obligatorias:
 - MantÃ©n un formato lo mÃ¡s parecido posible al original.
 - MantÃ©n casi todos los Ã­tems originales.
 - Si la prueba original tiene 10 preguntas o menos, conserva todas las preguntas.
+- Si la prueba original tiene 10 preguntas o menos, conserva exactamente la misma cantidad total de preguntas.
+- No agregues nuevas preguntas, nuevos ejercicios, nuevos items, nuevos subitems ni nuevas alternativas, salvo que el docente lo pida de forma explicita.
+- No expandas artificialmente la evaluacion para completarla o mejorarla.
+- La adaptacion debe trabajar sobre la prueba original existente, no convertirla en una prueba distinta.
+- Puedes agregar apoyos de acceso, pero no nuevos reactivos evaluables.
+- Los apoyos permitidos son: reformulacion de instrucciones, division en pasos, aclaracion de vocabulario, apoyos visuales escritos, espacio de respuesta mas claro y un ejemplo breve no evaluable antes de una pregunta.
+- Si agregas un ejemplo, debe ser solo de apoyo, no debe llevar numeracion propia, no debe tener puntaje y no debe contarse como una nueva pregunta.
 - No cambies signos, operaciones, datos numericos ni alternativas correctas de la prueba original.
 - Si una pregunta original usa suma, resta, multiplicacion o division, la adaptacion debe mantener esa misma operacion.
 - Si se pidiÃ³ reducir cantidad de items, la reducciÃ³n debe ser moderada, nunca extrema.
@@ -750,6 +780,7 @@ Reglas obligatorias:
 - Debes escribir de forma visible "Puntaje total: 100 puntos" o equivalente directo.
 - La prueba debe quedar completa hasta la ultima pregunta o ultimo subitem correspondiente.
 - Simplifica, clarifica y agrega apoyos, pero no mutiles la evaluaciÃ³n.
+- Tu objetivo es adaptar el acceso a la misma evaluacion original, no crear una evaluacion nueva ni mas larga.
 - No escribas explicaciÃ³n, resumen ni justificaciÃ³n.
 
 Contexto:
