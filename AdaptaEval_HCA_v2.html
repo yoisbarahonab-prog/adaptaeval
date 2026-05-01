@@ -428,6 +428,37 @@ label{
   font-size:.84rem;
   line-height:1.5;
 }
+.roster-helper{
+  display:grid;
+  gap:10px;
+  margin-top:2px;
+  padding:14px 16px;
+  border:1px solid rgba(36,75,135,.12);
+  border-radius:16px;
+  background:linear-gradient(180deg,#f8fbff,#fdfefe);
+}
+.roster-helper strong{
+  color:var(--brand-2);
+  font-size:.92rem;
+}
+.roster-helper p{
+  margin:0;
+  color:var(--muted);
+  font-size:.84rem;
+  line-height:1.5;
+}
+.roster-note{
+  padding:10px 12px;
+  border-radius:12px;
+  background:#eef6ff;
+  border:1px solid rgba(52,119,188,.14);
+  color:#365574;
+  font-size:.82rem;
+  line-height:1.45;
+}
+.roster-note[hidden]{
+  display:none;
+}
 .profile-actions,
 .profile-examples{
   display:flex;
@@ -789,15 +820,29 @@ button:disabled{
           </div>
           <div class="field">
             <label for="course">Curso</label>
-            <input id="course" type="text" placeholder="Opcional. Ej.: 5 Básico, 1 Medio">
+            <select id="course">
+              <option value="">Selecciona un curso</option>
+            </select>
+            <div class="hint">Elige el curso para consultar la nómina institucional NEE 2026.</div>
           </div>
           <div class="field full">
             <label for="learningGoal">Objetivo de aprendizaje</label>
             <textarea id="learningGoal" placeholder="Opcional. Si lo conoces, ayuda a mantener el foco evaluativo."></textarea>
           </div>
           <div class="field full">
+            <label for="studentRosterSelect">Estudiante del curso</label>
+            <div class="roster-helper">
+              <strong>Nómina institucional NEE 2026</strong>
+              <p>Selecciona el curso y luego al estudiante. Si no aparece en esta nómina, puedes describir el perfil manualmente en el cuadro siguiente.</p>
+              <select id="studentRosterSelect" disabled>
+                <option value="">Selecciona primero un curso</option>
+              </select>
+              <div class="hint" id="studentRosterHint">Selecciona primero un curso para ver sus estudiantes con NEE o en observación.</div>
+              <div class="roster-note" id="studentSelectionNote" hidden></div>
+            </div>
+          </div>
+          <div class="field full">
             <label for="studentProfile">NEE o perfil del estudiante</label>
-            <textarea id="studentProfile" placeholder="Ej.: TEL mixto, TDAH, TEA nivel 1, dificultades lectoras, rezago en comprensión, bajo umbral atencional, etc."></textarea>
             <div class="profile-helper">
               <strong>Ayuda rápida para completar este campo</strong>
               <p>Si no sabes cómo redactarlo, toca un ejemplo y úsalo como base. Luego puedes agregar un detalle breve, como “necesita instrucciones cortas” o “requiere menos escritura”.</p>
@@ -814,6 +859,7 @@ button:disabled{
                 <button type="button" class="profile-chip" data-profile-example="Bajo umbral atencional, necesita instrucciones concretas, menor distractor visual y secuencia clara de trabajo.">Bajo umbral atencional</button>
               </div>
             </div>
+            <textarea id="studentProfile" placeholder="Ej.: TEL mixto, TDAH, TEA nivel 1, dificultades lectoras, rezago en comprensión, bajo umbral atencional, etc."></textarea>
           </div>
           <div class="field full">
             <label for="evaluationText">Prueba original</label>
@@ -916,6 +962,135 @@ button:disabled{
   </main>
 
 <script>
+const NEE_ROSTER = {
+  "PRE-KÍNDER": [
+    { name: "Luciano Saravia", descriptionOriginal: "Luciano Saravia (posible TEA según Terapeuta Ocupacional)." },
+    { name: "Olivia Paz Menay Marfán", descriptionOriginal: "Olivia Paz Menay Marfán (en evaluación, posible TEA)" }
+  ],
+  "KÍNDER": [
+    { name: "Benjamín Enrique Sánchez Jara", descriptionOriginal: "Benjamín Enrique Sánchez Jara (en evaluación, posible TEA y TIS)." },
+    { name: "Pascual Facundo Sanz González", descriptionOriginal: "Pascual Facundo Sanz González (TDAH y TIS)." },
+    { name: "Ante Eldan Silva", descriptionOriginal: "Ante Eldan Silva (TIS y TDAH)." },
+    { name: "Renato Parraguez Oyarce", descriptionOriginal: "Renato Parraguez Oyarce (desregulación emocional, hiperactividad del desarrollo, conductas oposicionistas)." },
+    { name: "Salvador Corral Reyes", descriptionOriginal: "Salvador Corral Reyes (a la espera del diagnóstico por Neurólogo)." },
+    { name: "Amparo Ignacia Escudero Uribe", descriptionOriginal: "Amparo Ignacia Escudero Uribe (posible TEL)" },
+    { name: "Pedro Antonio González Oses", descriptionOriginal: "Pedro Antonio González Oses (TEA)" },
+    { name: "Salvador Martínez Pastén", descriptionOriginal: "Salvador Martínez Pastén (desregulación emocional, baja tolerancia a la frustración)." }
+  ],
+  "1° BÁSICO": [
+    { name: "Valentina Alejandra Galaz Moreno", descriptionOriginal: "Valentina Alejandra Galaz Moreno (trastorno del lenguaje)." },
+    { name: "Julieta Amparo Carrasco Reyes", descriptionOriginal: "Julieta Amparo Carrasco Reyes (Trastorno del Lenguaje de carácter expresivo de grado moderado)." },
+    { name: "Miguel Ángel Cornejo Herrera", descriptionOriginal: "Miguel Ángel Cornejo Herrera (TDAH)." },
+    { name: "Maite Celis Zapata", descriptionOriginal: "Maite Celis Zapata (Trastorno del desarrollo del lenguaje / pendiente evaluación Neurólogo)." },
+    { name: "Facundo Gutiérrez", descriptionOriginal: "Facundo Gutiérrez (en evaluación, posible TEA)." },
+    { name: "Diego Alonso Menay Marfán", descriptionOriginal: "Diego Alonso Menay Marfán (Dificultades de aprendizaje, en evaluación posible TEA)." }
+  ],
+  "2° BÁSICO": [
+    { name: "Vicente Zamorano Calderón", descriptionOriginal: "Vicente Zamorano Calderón (TIS, Trastorno de Hiperactividad)." },
+    { name: "Alonso Martínez Calderón", descriptionOriginal: "Alonso Martínez Calderón (TDAH, Trastorno de Hipersensibilidad)." },
+    { name: "Vicente Javier Soto Valdivia", descriptionOriginal: "Vicente Javier Soto Valdivia (Hiperactividad del desarrollo como observación precursora de TDAH, baja tolerancia a la frustración)." },
+    { name: "Anaís Reyes Vera", descriptionOriginal: "Anaís Reyes Vera (TDAH)." },
+    { name: "Facundo Alonso Rubina Maldonado", descriptionOriginal: "Facundo Alonso Rubina Maldonado (Observación: posible TEL)." },
+    { name: "Paulina Andrea Vergara Orellana", descriptionOriginal: "Paulina Andrea Vergara Orellana (Observación: TEL / comunicación)." }
+  ],
+  "3° BÁSICO": [
+    { name: "Raimundo Ravanal Paredes", descriptionOriginal: "Raimundo Ravanal Paredes (en evaluación por TDA)." },
+    { name: "Luciano Martín Farías Yáñez", descriptionOriginal: "Luciano Martín Farías Yáñez (en evaluación por TDAH)." },
+    { name: "Ema del Pilar Morales Salazar", descriptionOriginal: "Ema del Pilar Morales Salazar (TDA, trastorno de procesamiento sensorial, TEL con predominio expresivo)." },
+    { name: "Pedro Alonso Perseo Jorquera Flores", descriptionOriginal: "Pedro Alonso Perseo Jorquera Flores (dificultades específicas del aprendizaje lenguaje y matemática)." },
+    { name: "Guillermo Valentín González Osses", descriptionOriginal: "Guillermo Valentín González Osses (TDA)." },
+    { name: "Martín Ibarra Farfán", descriptionOriginal: "Martín Ibarra Farfán (dificultades de aprendizaje asociadas al área de Lenguaje/proceso lecto-escritura)." },
+    { name: "Emma Victoria Becerra Gopegui", descriptionOriginal: "Emma Victoria Becerra Gopegui (TDA, Dificultad visual)." },
+    { name: "Isidora Jayo Bustamante", descriptionOriginal: "Isidora Jayo Bustamante (TDAH)." },
+    { name: "Ángela Loreto Lorca Aguirre", descriptionOriginal: "Ángela Loreto Lorca Aguirre (TIS, AACC, ansiedad y dificultades en la interacción social)." },
+    { name: "Martín Ignacio Colina Crisóstomo", descriptionOriginal: "Martín Ignacio Colina Crisóstomo (Observación: No sigue instrucciones)." },
+    { name: "Clemente Rafael Olivares Morán", descriptionOriginal: "Clemente Rafael Olivares Morán (A la espera del diagnóstico por Neurólogo)." },
+    { name: "Isabella Antonia Gallardo Tolorza", descriptionOriginal: "Isabella Antonia Gallardo Tolorza (Observación: dificultad de aprendizaje / atención – concentración)." },
+    { name: "Dominga Ignacia Meneses Romero", descriptionOriginal: "Dominga Ignacia Meneses Romero (Observación: no sigue instrucciones / comunicación)." }
+  ],
+  "4° BÁSICO": [
+    { name: "Francisco Esteban Vergara Orellana", descriptionOriginal: "Francisco Esteban Vergara Orellana (dificultad específica del aprendizaje, área lenguaje, tratamiento fonoaudiológico)." },
+    { name: "Gaspar Ignacio Canales Galaz", descriptionOriginal: "Gaspar Ignacio Canales Galaz (TDA, TIS)." },
+    { name: "Marco Ramiro Hernández Pozo", descriptionOriginal: "Marco Ramiro Hernández Pozo (dificultad de habla / aprendizaje)." },
+    { name: "Javiera Paz Valenzuela Reyes", descriptionOriginal: "Javiera Paz Valenzuela Reyes (TEA de alto funcionamiento)." },
+    { name: "Alonso Antonio Zapata Garrido", descriptionOriginal: "Alonso Antonio Zapata Garrido (TDA, trastorno procesamiento sensorial, TEL mixto, desatención e hiperactividad)." },
+    { name: "Elena Rafaela Espina Hernández", descriptionOriginal: "Elena Rafaela Espina Hernández (Dificultades Específicas del Aprendizaje)." },
+    { name: "Dominga Antonia Silva González", descriptionOriginal: "Dominga Antonia Silva González (Ansiedad moderada, dificultad para regular la frustración, hipersensibilidad auditiva)." },
+    { name: "Pablo Ignacio Díaz Silva", descriptionOriginal: "Pablo Ignacio Díaz Silva (Observación: atención / concentración)." }
+  ],
+  "5° BÁSICO": [
+    { name: "José Tomás Adasme Alarcón", descriptionOriginal: "José Tomás Adasme Alarcón (TEA)." },
+    { name: "Josefa Agustina Silva Valdés", descriptionOriginal: "Josefa Agustina Silva Valdés (TDA)." },
+    { name: "Máximo Cristóbal Muñoz Medina", descriptionOriginal: "Máximo Cristóbal Muñoz Medina (TDAH)." },
+    { name: "Mateo Agustín Guajardo Valdés", descriptionOriginal: "Mateo Agustín Guajardo Valdés (Observar: ámbito social / necesita apoyo constante)." },
+    { name: "Pedro Esteban Quintanilla García", descriptionOriginal: "Pedro Esteban Quintanilla García (Observar: dificultad espacial / frustración)." },
+    { name: "Martín Augusto Carrasco Pavez", descriptionOriginal: "Martín Augusto Carrasco Pavez (Observar: falta de autonomía / pensamiento lógico)." },
+    { name: "Mateo Sebastián Pérez Cruces", descriptionOriginal: "Mateo Sebastián Pérez Cruces (Observar: atención / concentración)." },
+    { name: "Dominga Javiera Vásquez Quinteros", descriptionOriginal: "Dominga Javiera Vásquez Quinteros (Observar: es muy concreta)." },
+    { name: "Emilia Ignacia Arenas Muñoz", descriptionOriginal: "Emilia Ignacia Arenas Muñoz (Observar: ritmo lento)." },
+    { name: "Trinidad de Jesús Suárez Gangas", descriptionOriginal: "Trinidad de Jesús Suárez Gangas (Observar: dificultad área matemática)." }
+  ],
+  "6° BÁSICO": [
+    { name: "Magdalena Ignacia Arias Farías", descriptionOriginal: "Magdalena Ignacia Arias Farías (TDAH y dif. específica del aprendizaje por confirmar)." },
+    { name: "Cristian Alonso Canales Guerrero", descriptionOriginal: "Cristian Alonso Canales Guerrero (TEA)." },
+    { name: "Gaspar Enrique Valenzuela Sababa", descriptionOriginal: "Gaspar Enrique Valenzuela Sababa (TEA, dificultades del aprendizaje – retraso lector)." },
+    { name: "Matilde Isabel Arias Farías", descriptionOriginal: "Matilde Isabel Arias Farías (TDA, Trastorno Oposicionista Desafiante)." },
+    { name: "Amparo Madrid Briones", descriptionOriginal: "Amparo Madrid Briones (Observar: atención – concentración)." }
+  ],
+  "7° BÁSICO": [
+    { name: "Martín Alonso Becerra Valdivia", descriptionOriginal: "Martín Alonso Becerra Valdivia (TEA, TIS, TDA inatento)." },
+    { name: "Mateo Agustín Corral Reyes", descriptionOriginal: "Mateo Agustín Corral Reyes (TEA, TDA, CI limítrofe, trastorno específico del aprendizaje)." },
+    { name: "Isabella Emilia Fedele Acevedo", descriptionOriginal: "Isabella Emilia Fedele Acevedo (CI limítrofe)" },
+    { name: "Máximo Benjamín Álvarez Becerra", descriptionOriginal: "Máximo Benjamín Álvarez Becerra (CI medio bajo, funciones cognitivas descendidas)." },
+    { name: "Leonidas Antonio Pérez Cruces", descriptionOriginal: "Leonidas Antonio Pérez Cruces (TDAH)." },
+    { name: "Vicente Jesús Vilches Bozo", descriptionOriginal: "Vicente Jesús Vilches Bozo (TDAH, dificultad en comprensión oral y escrita)." },
+    { name: "Matías Ignacio Badillo Hernández", descriptionOriginal: "Matías Ignacio Badillo Hernández (TDA, trastorno específico del aprendizaje / matemática, indicadores de ansiedad)." },
+    { name: "Rafael Reveco Lira", descriptionOriginal: "Rafael Reveco Lira (AACC, Altas Capacidades Intelectuales)." }
+  ],
+  "8° BÁSICO": [
+    { name: "Maite Rozas Moya", descriptionOriginal: "Maite Rozas Moya (TDA / dificultades emocionales)." },
+    { name: "José Pablo Fuentes Retamal", descriptionOriginal: "José Pablo Fuentes Retamal (bajo rendimiento/ dificultades específicas del aprendizaje)." },
+    { name: "Dominga Meza Martínez", descriptionOriginal: "Dominga Meza Martínez (dificultades específicas de aprendizaje)." },
+    { name: "Diego Cristián Guajardo Zúñiga", descriptionOriginal: "Diego Cristián Guajardo Zúñiga (TEA)." },
+    { name: "Gaspar Facundo Calquín Sagredo", descriptionOriginal: "Gaspar Facundo Calquín Sagredo (TEA)." },
+    { name: "Julián Andrés Pascual Aravena", descriptionOriginal: "Julián Andrés Pascual Aravena (TEA)." },
+    { name: "Antonia Isidora Meneses Romero", descriptionOriginal: "Antonia Isidora Meneses Romero (TEA)." },
+    { name: "José Tomás Olivares Hidalgo", descriptionOriginal: "José Tomás Olivares Hidalgo (TDA)." },
+    { name: "Silvia Sofía Canales Guerrero", descriptionOriginal: "Silvia Sofía Canales Guerrero (TEA, dificultades específicas del aprendizaje en matemática)." }
+  ],
+  "I MEDIO": [
+    { name: "Daniel Antonio González Caro", descriptionOriginal: "Daniel Antonio González Caro (TEA, TDA/alto nivel de ansiedad)." },
+    { name: "Catalina Antonia Morales Zúñiga", descriptionOriginal: "Catalina Antonia Morales Zúñiga (TDA mixto/ TIS)." },
+    { name: "Renato Sebastián Bravo Farías", descriptionOriginal: "Renato Sebastián Bravo Farías (TDAH)." },
+    { name: "Diego Julián Palma Opazo", descriptionOriginal: "Diego Julián Palma Opazo (TDA, con hiperactividad leve)." },
+    { name: "Emilio Alejandro Piña Riveros", descriptionOriginal: "Emilio Alejandro Piña Riveros (TDA mixto, con rasgo oposicionista)." },
+    { name: "Julián Cristóbal Meneses González", descriptionOriginal: "Julián Cristóbal Meneses González (TEA)." },
+    { name: "José Pablo Jeldres Mora", descriptionOriginal: "José Pablo Jeldres Mora (Trastorno Táctil e Hipersensibilidad Sensorial)." },
+    { name: "Luciano Baltazar Dinamarca Pardo", descriptionOriginal: "Luciano Baltazar Dinamarca Pardo (TDAH, con medicamento)." },
+    { name: "Matilde Cornejo", descriptionOriginal: "Matilde Cornejo (TEA)." }
+  ],
+  "II MEDIO": [
+    { name: "Joaquín Orlando Venegas Véliz", descriptionOriginal: "Joaquín Orlando Venegas Véliz (TDAH)." },
+    { name: "Rodrigo Sebastián Vera Stehr", descriptionOriginal: "Rodrigo Sebastián Vera Stehr (TEA, TDAH mixto, trastorno anímico en tratamiento)." },
+    { name: "Emilia Díaz Gangas", descriptionOriginal: "Emilia Díaz Gangas (Diagnóstico reservado)." }
+  ],
+  "III MEDIO": [
+    { name: "Camilo Ignacio Rojas Jara", descriptionOriginal: "Camilo Ignacio Rojas Jara (TDA)." },
+    { name: "Martín André Veas Jara", descriptionOriginal: "Martín André Veas Jara (TEA, TDA)." },
+    { name: "Lucas Vicente Morales Rivera", descriptionOriginal: "Lucas Vicente Morales Rivera (TDA / coeficiente intelectual medio bajo)." },
+    { name: "Víctor Rafael Astorga Morales", descriptionOriginal: "Víctor Rafael Astorga Morales (TEA, TDAH)." },
+    { name: "Gaspar Tapia Cárdenas", descriptionOriginal: "Gaspar Tapia Cárdenas (TEA, sin documentación)." },
+    { name: "Tomás Ignacio Rodríguez Soto", descriptionOriginal: "Tomás Ignacio Rodríguez Soto (TEA)." }
+  ],
+  "IV MEDIO": [
+    { name: "Ariel Felipe González Caro", descriptionOriginal: "Ariel Felipe González Caro (TDAH)." },
+    { name: "Ignacio Andrés Silva Valdés", descriptionOriginal: "Ignacio Andrés Silva Valdés (TDA)." },
+    { name: "Rafael Agustín Vera Stehr", descriptionOriginal: "Rafael Agustín Vera Stehr (TEA, trastorno del ánimo y del sueño, ansiedad moderada)." },
+    { name: "Felipe Maximiliano Pascual Aravena", descriptionOriginal: "Felipe Maximiliano Pascual Aravena (TEA)." },
+    { name: "Agustina Florencia Correa Jorquera", descriptionOriginal: "Agustina Florencia Correa Jorquera (dificultades específicas del aprendizaje, área de cálculo.)" }
+  ]
+};
+
 const state = {
   results: {
     adapted: "",
@@ -928,10 +1103,14 @@ const $ = (id) => document.getElementById(id);
 const els = {
   subject: $("subject"),
   course: $("course"),
+  studentRosterSelect: $("studentRosterSelect"),
+  studentRosterHint: $("studentRosterHint"),
+  studentSelectionNote: $("studentSelectionNote"),
   learningGoal: $("learningGoal"),
   studentProfile: $("studentProfile"),
   evaluationText: $("evaluationText"),
   teacherNote: $("teacherNote"),
+  generateBtn: $("generateBtn"),
   globalMessage: $("globalMessage"),
   loader: $("loader"),
   resultsCard: $("resultsCard"),
@@ -1003,6 +1182,17 @@ function cleanText(value) {
     .trim();
 }
 
+function normalizeCourseLabel(value) {
+  return cleanText(value)
+    .toUpperCase()
+    .replace(/\s+/g, " ")
+    .replace("PRE- KÍNDER", "PRE-KÍNDER")
+    .replace("4°BÁSICO", "4° BÁSICO")
+    .replace("5°BÁSICO", "5° BÁSICO")
+    .replace("6°BÁSICO", "6° BÁSICO")
+    .replace("8°BÁSICO", "8° BÁSICO");
+}
+
 function repairMojibake(text) {
   return String(text || "")
     .replace(/Ã¡/g, "á")
@@ -1021,6 +1211,63 @@ function repairMojibake(text) {
     .replace(/Â¡/g, "¡")
     .replace(/Â/g, "")
     .replace(/â€¢/g, "•");
+}
+
+function fillCourseOptions() {
+  const courses = Object.keys(NEE_ROSTER);
+  els.course.innerHTML = '<option value="">Selecciona un curso</option>' + courses
+    .map((course) => `<option value="${escapeHtml(course)}">${escapeHtml(course)}</option>`)
+    .join("");
+}
+
+function updateRosterNote(text = "", show = false) {
+  if (!els.studentSelectionNote) return;
+  els.studentSelectionNote.textContent = text;
+  els.studentSelectionNote.hidden = !show;
+}
+
+function refreshStudentRoster() {
+  const selectedCourse = normalizeCourseLabel(els.course.value);
+  const students = NEE_ROSTER[selectedCourse] || [];
+
+  if (!selectedCourse) {
+    els.studentRosterSelect.innerHTML = '<option value="">Selecciona primero un curso</option>';
+    els.studentRosterSelect.disabled = true;
+    els.studentRosterHint.textContent = "Selecciona primero un curso para ver sus estudiantes con NEE o en observación.";
+    updateRosterNote("", false);
+    return;
+  }
+
+  if (!students.length) {
+    els.studentRosterSelect.innerHTML = '<option value="">No hay estudiantes cargados para este curso</option>';
+    els.studentRosterSelect.disabled = true;
+    els.studentRosterHint.textContent = "Este curso no tiene estudiantes cargados en la nómina institucional 2026.";
+    updateRosterNote("Puedes escribir el perfil manualmente si necesitas trabajar con un estudiante que no figura en esta nómina.", true);
+    return;
+  }
+
+  els.studentRosterSelect.disabled = false;
+  els.studentRosterSelect.innerHTML = '<option value="">Selecciona un estudiante</option>' + students
+    .map((student, index) => `<option value="${index}">${escapeHtml(student.name)}</option>`)
+    .join("");
+  els.studentRosterHint.textContent = `Nómina institucional 2026: ${students.length} estudiante(s) cargado(s) para ${selectedCourse}.`;
+  updateRosterNote("Si no encuentras al estudiante, puedes describir el perfil manualmente en el cuadro siguiente.", true);
+}
+
+function autofillStudentProfileFromRoster() {
+  const selectedCourse = normalizeCourseLabel(els.course.value);
+  const students = NEE_ROSTER[selectedCourse] || [];
+  const index = Number.parseInt(els.studentRosterSelect.value, 10);
+  const student = Number.isInteger(index) ? students[index] : null;
+
+  if (!student) {
+    updateRosterNote("Si no encuentras al estudiante, puedes describir el perfil manualmente en el cuadro siguiente.", !!selectedCourse);
+    return;
+  }
+
+  els.studentProfile.value = student.descriptionOriginal;
+  updateRosterNote(`Perfil cargado desde la nómina institucional 2026 para ${student.name}. Puedes ajustarlo manualmente si lo necesitas.`, true);
+  els.studentProfile.focus();
 }
 
 function escapeHtml(text) {
@@ -1056,6 +1303,32 @@ function summarizeWarnings(warnings) {
 
 function showLoader(on) {
   els.loader.classList.toggle("show", on);
+  if (els.generateBtn) {
+    els.generateBtn.disabled = on;
+    els.generateBtn.textContent = on ? "Generando..." : "Generar prueba adaptada";
+  }
+}
+
+function getFriendlyErrorMessage(error) {
+  const raw = repairMojibake(String(error && error.message ? error.message : error || "")).trim();
+
+  if (/quota exceeded|rate[- ]?limit|free[_ ]?tier[_ ]?requests|retry in/i.test(raw)) {
+    return "Se alcanzó temporalmente el límite de uso de la IA. Espera un minuto y vuelve a intentarlo.";
+  }
+
+  if (/failed to fetch|networkerror|load failed|network request failed/i.test(raw)) {
+    return "No fue posible conectar con el servicio de IA en este momento. Revisa tu conexión y vuelve a intentarlo.";
+  }
+
+  if (/api key not valid|invalid api key|permission denied|unauthorized|forbidden/i.test(raw)) {
+    return "La conexión con la IA necesita revisión de acceso. Verifica la configuración del servicio y vuelve a intentarlo.";
+  }
+
+  if (!raw) {
+    return "No fue posible generar la adaptación en este momento. Intenta nuevamente en unos segundos.";
+  }
+
+  return `No fue posible generar la adaptación en este momento. ${raw}`;
 }
 
 function selectedValues(containerId) {
@@ -1221,7 +1494,7 @@ async function generateAdaptation() {
     });
     renderResults(data);
   } catch (error) {
-    showMessage(`No fue posible generar la adaptación. ${error.message}`, "error");
+    showMessage(getFriendlyErrorMessage(error), "error");
   } finally {
     showLoader(false);
   }
@@ -1362,6 +1635,19 @@ function teacherDocHtml() {
   return `<p class="doc-line">${escapeHtml(state.results.teacher)}</p>`;
 }
 
+function installRosterHelpers() {
+  fillCourseOptions();
+  refreshStudentRoster();
+
+  els.course.addEventListener("change", () => {
+    refreshStudentRoster();
+  });
+
+  els.studentRosterSelect.addEventListener("change", () => {
+    autofillStudentProfileFromRoster();
+  });
+}
+
 function insertStudentProfile(text) {
   const current = cleanText(els.studentProfile.value);
   const next = cleanText(text);
@@ -1399,6 +1685,7 @@ function installProfileHelpers() {
 }
 
 applyEditorialCopy();
+installRosterHelpers();
 installProfileHelpers();
 
 $("generateBtn").addEventListener("click", generateAdaptation);
