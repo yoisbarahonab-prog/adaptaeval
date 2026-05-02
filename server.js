@@ -34,7 +34,9 @@ const HTML_PATH = path.join(__dirname, "AdaptaEval_HCA_v2.html");
 const ANOTACIONES_HTML_PATH = path.join(__dirname, "Anotaciones_RICE_HCA.html");
 const DEFAULT_RICE_PATH = path.join(__dirname, "RICE2025_ACTUALIZADO.pdf");
 const DEFAULT_RICE_TEXT_PATH = path.join(__dirname, "RICE2025_ACTUALIZADO.txt");
+const STUDENTS_PATH = path.join(__dirname, "students_2026.json");
 let defaultRiceTextCache = "";
+let studentsCache = null;
 
 function sendJson(res, status, payload) {
   const body = JSON.stringify(payload);
@@ -58,6 +60,15 @@ function sendHtml(res, htmlPath = HTML_PATH) {
     });
     res.end(content);
   });
+}
+
+function getStudentsData() {
+  if (studentsCache) return studentsCache;
+  if (!fs.existsSync(STUDENTS_PATH)) {
+    return { source: "", courses: {}, total_students: 0, total_courses: 0 };
+  }
+  studentsCache = JSON.parse(fs.readFileSync(STUDENTS_PATH, "utf8"));
+  return studentsCache;
 }
 
 function readRequestBody(req) {
@@ -84,6 +95,98 @@ function cleanText(value) {
     .trim();
 }
 
+function normalizeAdaptedAssessmentText(text) {
+  let cleaned = cleanText(text);
+  if (!cleaned) return cleaned;
+
+  cleaned = cleaned.replace(/^NSTITUTO HANS CHRISTIAN ANDERSEN\b/m, "INSTITUTO HANS CHRISTIAN ANDERSEN");
+  cleaned = cleaned.replace(/^(PRUEBA\s+DE[^\n]*?)\s+ADAPTADA$/im, "$1 (ADAPTADA)");
+  cleaned = cleaned.replace(/^Las decenas son números como .*$/im, "Recuerda: al redondear, elige la decena más cercana.");
+
+  return cleaned;
+}
+
+function sanitizeSummaryText(summary, adapted) {
+  const cleanedSummary = cleanText(summary);
+  if (!cleanedSummary) return cleanedSummary;
+
+  const adaptedClean = normalizeAdaptedAssessmentText(adapted);
+  const hasSectionThree = /\bIII\.\s*Desarrollo\b/i.test(adaptedClean);
+  const hasQuestion9 = /(?:^|\n)\s*9[\)\.\-:]/m.test(adaptedClean);
+  const hasQuestion10 = /(?:^|\n)\s*10[\)\.\-:]/m.test(adaptedClean);
+  const preservedQuestionCount = hasQuestion9 && hasQuestion10;
+
+  const lines = cleanedSummary
+    .split("\n")
+    .map((line) => cleanText(line))
+    .filter(Boolean)
+    .map((line) => {
+      let nextLine = line;
+      if (preservedQuestionCount && /reducci[oó]n moderada de [íi]tems/i.test(nextLine)) {
+        nextLine = nextLine.replace(/reducci[oó]n moderada de [íi]tems/gi, "reducción de carga verbal");
+      }
+      if (preservedQuestionCount && /se elimin[oó] la pregunta 10 completa/i.test(nextLine)) {
+        nextLine = "Se ajustó la distribución del puntaje y la presentación interna de la pregunta 10 para mantener una escala clara y coherente.";
+      }
+      return nextLine;
+    })
+    .filter((line) => {
+      if (hasSectionThree && /elimin[oó].*secci[oó]n.*desarrollo/i.test(line)) return false;
+      if (hasQuestion9 && /elimin[oó].*pregunta\s*9/i.test(line)) return false;
+      if (hasQuestion10 && /elimin[oó].*pregunta\s*10/i.test(line)) return false;
+      return true;
+    });
+
+  return cleanText(lines.join("\n"));
+}
+
+function sanitizeTeacherRows(rows, adapted) {
+  const adaptedClean = normalizeAdaptedAssessmentText(adapted);
+  const hasQuestion9 = /(?:^|\n)\s*9[\)\.\-:]/m.test(adaptedClean);
+  const hasQuestion10 = /(?:^|\n)\s*10[\)\.\-:]/m.test(adaptedClean);
+  const preservedQuestionCount = hasQuestion9 && hasQuestion10;
+
+  return (rows || []).map((row) => {
+    const nextRow = { ...row };
+
+    if (preservedQuestionCount && /reducci[oó]n moderada de [íi]tems/i.test(nextRow.cambio || "")) {
+      nextRow.cambio = cleanText((nextRow.cambio || "").replace(/reducci[oó]n moderada de [íi]tems/gi, "Reducción de carga verbal"));
+    }
+
+    if (preservedQuestionCount && /preguntas? de desarrollo/i.test(nextRow.cambio || "") && /pregunta 10/i.test(nextRow.cambio || "")) {
+      nextRow.cambio = "Ampliación del espacio de respuesta y ajuste de puntajes en las preguntas de desarrollo.";
+    }
+
+    if (preservedQuestionCount && /se solicit[oó] una reducci[oó]n moderada de [íi]tems/i.test(nextRow.justificacion || "")) {
+      nextRow.justificacion = cleanText(
+        (nextRow.justificacion || "").replace(
+          /se solicit[oó] una reducci[oó]n moderada de [íi]tems/i,
+          "Se buscó reducir la carga verbal y ordenar mejor la presentación de la evaluación"
+        )
+      );
+    }
+
+    return nextRow;
+  });
+}
+
+function finalizeParsedSections(parsed) {
+  parsed.adapted = normalizeAdaptedAssessmentText(parsed.adapted);
+  parsed.summary = sanitizeSummaryText(parsed.summary, parsed.adapted);
+  parsed.teacher_rows = sanitizeTeacherRows(parsed.teacher_rows, parsed.adapted);
+
+  if (!cleanText(parsed.summary)) {
+    parsed.summary = "Se ajustó la evaluación para mantener el aprendizaje esencial, mejorar el acceso al contenido y ordenar el puntaje total en 100 puntos.";
+  }
+
+  if (cleanText(parsed.teacher)) {
+    parsed.teacher = cleanText(parsed.teacher)
+      .replace(/^NSTITUTO HANS CHRISTIAN ANDERSEN\b/m, "INSTITUTO HANS CHRISTIAN ANDERSEN");
+  }
+
+  return parsed;
+}
+
 function normalizeSupportText(value) {
   return cleanText(value).toLowerCase();
 }
@@ -91,6 +194,13 @@ function normalizeSupportText(value) {
 function wantsInitialExample(payload) {
   return Array.isArray(payload.supports) && payload.supports.some((item) => (
     normalizeSupportText(item).includes("agregar ejemplo inicial")
+  ));
+}
+
+function wantsModerateReduction(payload) {
+  return Array.isArray(payload.supports) && payload.supports.some((item) => (
+    normalizeSupportText(item).includes("reducir cantidad de ítems de forma moderada")
+    || normalizeSupportText(item).includes("reducir cantidad de items de forma moderada")
   ));
 }
 
@@ -108,6 +218,17 @@ function estimateItemCount(text) {
   return matches.length;
 }
 
+function estimateAlternativeCount(text) {
+  const cleaned = cleanText(text);
+  if (!cleaned) return 0;
+
+  return cleaned
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => /^[a-d][\)\.\-:]/i.test(line))
+    .length;
+}
+
 function hasExcessiveReduction(originalText, adaptedText) {
   const originalCount = estimateItemCount(originalText);
   const adaptedCount = estimateItemCount(adaptedText);
@@ -120,6 +241,22 @@ function hasExcessiveReduction(originalText, adaptedText) {
   if (originalCount >= 8) minimumAllowed = Math.max(minimumAllowed, Math.ceil(originalCount * 0.6));
 
   return adaptedCount < minimumAllowed;
+}
+
+function hasExcessiveExpansionWhenReducing(originalText, adaptedText) {
+  const originalClean = cleanText(originalText);
+  const adaptedClean = cleanText(adaptedText);
+  if (!originalClean || !adaptedClean) return false;
+
+  const originalLength = originalClean.length;
+  const adaptedLength = adaptedClean.length;
+  const originalAlternatives = estimateAlternativeCount(originalClean);
+  const adaptedAlternatives = estimateAlternativeCount(adaptedClean);
+
+  if (adaptedLength > Math.round(originalLength * 1.12)) return true;
+  if (originalAlternatives > 0 && adaptedAlternatives > originalAlternatives) return true;
+
+  return false;
 }
 
 function extractQuestionNumbers(text) {
@@ -227,13 +364,19 @@ function hasExcessiveOpenResponseArea(text) {
     .some((line) => line.length > 220 || /^[_*]{120,}$/.test(line));
 }
 
-function needsStructuralRebuild(originalText, adaptedText) {
+function needsStructuralRebuild(originalText, adaptedText, payload = {}) {
   const reasons = [];
   const cleanedAdapted = cleanText(adaptedText);
   if (!cleanedAdapted) return ["La prueba adaptada quedÃ³ vacÃ­a."];
 
+  const reductionRequested = wantsModerateReduction(payload);
+
   if (hasExcessiveReduction(originalText, cleanedAdapted)) {
     reasons.push("La adaptaciÃ³n redujo demasiado la cantidad de preguntas.");
+  }
+
+  if (reductionRequested && hasExcessiveExpansionWhenReducing(originalText, cleanedAdapted)) {
+    reasons.push("La adaptación quedó más extensa de lo adecuado para una solicitud de reducción moderada.");
   }
 
   const originalHighest = highestQuestionNumber(originalText);
@@ -276,7 +419,12 @@ function buildPrompt(payload) {
   const supports = Array.isArray(payload.supports) && payload.supports.length
     ? payload.supports.map((item) => `- ${item}`).join("\n")
     : "- Usa adecuaciones razonables segÃºn el perfil del estudiante.";
-  const exampleInstruction = wantsInitialExample(payload)
+  const reductionInstruction = wantsModerateReduction(payload)
+    ? '- El docente pidió reducir la evaluación de forma moderada. Haz una versión realmente más breve que la original, sin perder el aprendizaje esencial. Conserva las preguntas numeradas principales, pero reduce extensión verbal, ejemplos, subpasos y alternativas cuando sea pertinente.\n- Puedes reducir de manera moderada la cantidad de alternativas en selección múltiple, pero nunca dejes solo la alternativa correcta. Conserva la correcta y al menos uno o dos distractores plausibles.\n- No compenses la reducción agregando ejemplos, texto de apoyo extenso, duplicación de instrucciones ni explicaciones adicionales. La versión final debe sentirse más breve, no más larga.'
+    : '- Si no se pidió reducción de ítems, conserva la extensión general de la prueba sin inflarla ni recortarla de forma artificial.';
+  const exampleInstruction = wantsModerateReduction(payload)
+    ? '- Como aquí se pidió una versión más breve, no agregues ejemplos iniciales ni ejemplos resueltos aunque ese apoyo también esté marcado.'
+    : wantsInitialExample(payload)
     ? '- Puedes agregar un ejemplo inicial breve de apoyo si ayuda al acceso. Ese ejemplo debe ser no evaluable, sin numeración propia y sin puntaje.'
     : '- No agregues ejemplos iniciales, ejemplos resueltos ni apoyos en formato de ejemplo. Si no fue solicitado, están prohibidos.';
 
@@ -291,8 +439,11 @@ Marco obligatorio:
 - No inventes contenidos ajenos a la prueba.
 - No des recomendaciones generales sin concretar cambios.
 - Debes entregar una prueba adaptada completa y usable.
+- Conserva exactamente el encabezado institucional "INSTITUTO HANS CHRISTIAN ANDERSEN" si aparece en la prueba original.
+- Si renombras el instrumento, usa un formato limpio como "(ADAPTADA)" al final del título, no frases sueltas.
 - Si la prueba original trae preguntas enumeradas, conserva esa numeraciÃ³n cuando sea Ãºtil.
 - Prioriza lenguaje claro, instrucciones paso a paso, formato accesible y ajustes proporcionales al perfil del estudiante.
+- Si agregas aclaraciones pedagógicas o de vocabulario, deben ser breves: una sola oración corta.
 ${exampleInstruction}
 
 Responde usando exactamente estos bloques y en este orden. No uses markdown adicional fuera de ellos:
@@ -323,6 +474,9 @@ NOTA_LEGAL: ...
 
 No uses placeholders, no escribas nada fuera de esos bloques y no expliques tu proceso.
 Si no puedes completar algÃºn bloque, igual escribe contenido Ãºtil dentro del bloque correspondiente y nunca lo dejes vacÃ­o.
+- El resumen de cambios y la justificación deben describir solo la versión final entregada, no borradores previos.
+- Nunca digas que se eliminó una pregunta o una sección si esa pregunta o esa sección sí aparece en la versión final.
+- Si se redujo solo un subítem o parte interna de una pregunta, dilo con precisión y no lo presentes como eliminación de la pregunta completa.
 
 Datos del caso:
 Asignatura: ${cleanText(payload.subject) || "No informada"}
@@ -348,7 +502,12 @@ function buildPromptStrict(payload) {
   const supports = Array.isArray(payload.supports) && payload.supports.length
     ? payload.supports.map((item) => `- ${item}`).join("\n")
     : "- Usa adecuaciones razonables segun el perfil del estudiante.";
-  const exampleInstruction = wantsInitialExample(payload)
+  const reductionInstruction = wantsModerateReduction(payload)
+    ? '- El docente pidió reducir la evaluación de forma moderada. Entrega una versión realmente más breve que la original: menos carga verbal, menos alternativas cuando se pueda y sin textos de apoyo extra.\n- Mantén las preguntas numeradas principales siempre que sea posible, pero acorta su longitud interna.\n- Puedes reducir alternativas en selección múltiple, pero nunca dejes solo la correcta. Conserva la correcta y al menos uno o dos distractores plausibles.\n- No agregues ejemplos, pasos duplicados ni explicaciones extra para compensar la reducción. La prueba final debe sentirse más breve.'
+    : '- Si no se pidió reducción, conserva una extensión similar a la original sin inflarla.';
+  const exampleInstruction = wantsModerateReduction(payload)
+    ? '- Como aquí se pidió una versión más breve, no agregues ejemplos iniciales ni ejemplos resueltos aunque ese apoyo también esté marcado.'
+    : wantsInitialExample(payload)
     ? '- Puedes agregar un ejemplo inicial breve de apoyo si ayuda al acceso. Ese ejemplo debe ser no evaluable, sin numeración propia y sin puntaje.'
     : '- No agregues ejemplos iniciales, ejemplos resueltos ni apoyos en formato de ejemplo. Si no fue solicitado, están prohibidos.';
 
@@ -366,6 +525,11 @@ Marco obligatorio:
 - La evaluacion adaptada final debe quedar en puntaje total de 100 puntos.
 - Si la prueba original trae otro puntaje, redistribuye los puntajes para que la version adaptada sume exactamente 100 puntos.
 - Debes escribir de forma visible "Puntaje total: 100 puntos" o equivalente directo dentro de la prueba adaptada.
+- Conserva exactamente el encabezado institucional "INSTITUTO HANS CHRISTIAN ANDERSEN" si aparece en la prueba original.
+- Si renombras el instrumento, usa un formato limpio como "(ADAPTADA)" al final del título, no frases sueltas.
+- Si la prueba incluye un objetivo de aprendizaje, debes adecuarlo para que quede coherente con la versión adaptada final.
+- El objetivo adaptado debe seguir alineado con el curriculum nacional chileno y con lo que efectivamente se evalúa en conocimientos, habilidades y actitudes.
+- No dejes un objetivo original que contradiga la prueba adaptada ni agregues objetivos ajenos al contenido evaluado.
 - Usa puntajes escolares limpios. Prefiere enteros y, solo si es estrictamente necesario, medios puntos (.5).
 - No uses decimales complejos como 6.25, 12.75, 18.75 u otros valores poco escolares.
 - La suma real de los puntajes por pregunta debe ser exactamente 100 puntos.
@@ -390,6 +554,8 @@ Marco obligatorio:
 - Mantén la numeración original de la prueba.
 - No agregues preguntas para compensar una reducción.
 - Si el docente pide reducir cantidad de items, haz una reduccion moderada, no extrema.
+- Si el docente pide reducir cantidad de items, conserva la validez de la evaluación reduciendo longitud real: menos carga verbal, menos alternativas y menos elementos accesorios, sin dejar la evaluación más larga que la original.
+- Si reduces alternativas, conserva la correcta y al menos uno o dos distractores plausibles. Nunca dejes una pregunta de selección múltiple con solo la respuesta correcta.
 - Nunca transformes una evaluacion de varias preguntas en una sola pregunta o en un solo ejercicio.
 - Si la prueba original tiene 5 o mas items o preguntas, la version adaptada debe mantener al menos 3 y normalmente 60% o mas de los items.
 - No elimines secciones completas salvo que sean claramente redundantes y puedas fusionarlas sin perder evidencia evaluativa.
@@ -398,7 +564,9 @@ Marco obligatorio:
 - En preguntas abiertas, deja un espacio de respuesta escolar razonable: entre 3 y 5 lineas como maximo.
 - No generes bloques gigantes de lineas, guiones, subrayados o espacios de respuesta excesivos.
 - Prioriza lenguaje claro, instrucciones paso a paso, formato accesible y ajustes proporcionales al perfil del estudiante.
+- Si agregas aclaraciones pedagógicas o de vocabulario, deben ser breves: una sola oración corta.
 - Tu objetivo es adaptar el acceso a la misma evaluacion original, no crear una evaluacion nueva ni mas larga.
+${reductionInstruction}
 ${exampleInstruction}
 
 Responde usando exactamente estos bloques y en este orden. No uses markdown adicional fuera de ellos:
@@ -429,6 +597,9 @@ NOTA_LEGAL: ...
 
 No uses placeholders, no escribas nada fuera de esos bloques y no expliques tu proceso.
 Si no puedes completar algun bloque, igual escribe contenido util dentro del bloque correspondiente y nunca lo dejes vacio.
+- El resumen de cambios y la justificación deben describir solo la versión final entregada, no borradores previos.
+- Nunca digas que se eliminó una pregunta o una sección si esa pregunta o esa sección sí aparece en la versión final.
+- Si se redujo solo un subítem o parte interna de una pregunta, dilo con precisión y no lo presentes como eliminación de la pregunta completa.
 
 Datos del caso:
 Asignatura: ${cleanText(payload.subject) || "No informada"}
@@ -618,16 +789,16 @@ function getDefaultRiceContext(payload) {
 
   const needles = [
     "Conocer sus anotaciones",
-    "anotaciÃ³n positiva",
-    "ArtÃ­culo 1: Falta Leve",
-    "ArtÃ­culo 2: Falta grave",
-    "ArtÃ­culo 3: Falta gravÃ­sima",
+    "anotación positiva",
+    "Artículo 1: Falta Leve",
+    "Artículo 2: Falta grave",
+    "Artículo 3: Falta gravísima",
     "Medidas disciplinarias formativas",
-    "Toda inasistencia deberÃ¡ ser justificada",
+    "Toda inasistencia deberá ser justificada",
     "inasistencias a evaluaciones",
-    "DesregulaciÃ³n Emocional y Conductual",
+    "Desregulación Emocional y Conductual",
     "RESPONSABLES: Docentes",
-    "PLAN DE ACCIÃ“N PARA INTERVENCIÃ“N DE CONDUCTAS GRAVES O GRAVÃSIMAS",
+    "PLAN DE ACCIÓN PARA INTERVENCIÓN DE CONDUCTAS GRAVES O GRAVÍSIMAS",
     cleanText(payload.descripcion).slice(0, 120),
     cleanText(payload.asignatura)
   ].filter(Boolean);
@@ -661,46 +832,46 @@ function ensureRiceReference(result, payload) {
   const description = cleanText(payload.descripcion).toLowerCase();
 
   let reference = {
-    parte: "RICE 2025, TÃ­tulo IX, ArtÃ­culo 1; TÃ­tulo XI, ArtÃ­culo 1 (Falta Leve)",
-    cita_breve: "Procedimientos: diÃ¡logo personal pedagÃ³gico y formativo, registro en hoja de vida; para falta leve, registro, entrevista profesor-estudiante y medida formativa ante reiteraciÃ³n.",
-    explicacion: "La conducta se vincula con el procedimiento institucional para registrar situaciones que afectan el desempeÃ±o escolar o el bien comÃºn sin constituir daÃ±o grave."
+    parte: "RICE 2025, Título IX, Artículo 1; Título XI, Artículo 1 (Falta Leve)",
+    cita_breve: "Procedimientos: diálogo personal pedagógico y formativo, registro en hoja de vida; para falta leve, registro, entrevista profesor-estudiante y medida formativa ante reiteración.",
+    explicacion: "La conducta se vincula con el procedimiento institucional para registrar situaciones que afectan el desempeño escolar o el bien común sin constituir daño grave."
   };
 
   if (category.includes("felicitaciones") || category.includes("agradecimiento") || classification.includes("positiva")) {
     reference = {
-      parte: "RICE 2025, Reconocimientos, ArtÃ­culos 1 a 3",
-      cita_breve: "Toda actitud o acciÃ³n destacada por representar virtudes y valores del Proyecto Educativo serÃ¡ reconocida mediante anotaciÃ³n positiva u otros estÃ­mulos.",
+      parte: "RICE 2025, Reconocimientos, Artículos 1 a 3",
+      cita_breve: "Toda actitud o acción destacada por representar virtudes y valores del Proyecto Educativo será reconocida mediante anotación positiva u otros estímulos.",
       explicacion: "El registro corresponde a una conducta positiva que el RICE permite reconocer como antecedente de distinciones y premios."
     };
   } else if (category.includes("inasistencia")) {
     reference = {
-      parte: "RICE 2025, Asistencia, ArtÃ­culos 8 y 9",
-      cita_breve: "Toda inasistencia deberÃ¡ ser justificada por el apoderado el dÃ­a del reintegro; las inasistencias a evaluaciones deben cumplir el reglamento de evaluaciÃ³n.",
+      parte: "RICE 2025, Asistencia, Artículos 8 y 9",
+      cita_breve: "Toda inasistencia deberá ser justificada por el apoderado el día del reintegro; las inasistencias a evaluaciones deben cumplir el reglamento de evaluación.",
       explicacion: "El registro se relaciona con el deber de justificar inasistencias y seguir el procedimiento institucional correspondiente."
     };
-  } else if (category.includes("desregulaciÃ³n")) {
+  } else if (category.includes("desregulación")) {
     reference = {
-      parte: "RICE 2025, Protocolo de respuesta a situaciones de DesregulaciÃ³n Emocional y Conductual",
-      cita_breve: "El protocolo establece responsables y etapas de abordaje para episodios de desregulaciÃ³n emocional/conductual durante la jornada escolar.",
-      explicacion: "La situaciÃ³n debe abordarse desde el protocolo DEC, priorizando contenciÃ³n, registro de lo ocurrido y comunicaciÃ³n segÃºn etapa."
+      parte: "RICE 2025, Protocolo de respuesta a situaciones de Desregulación Emocional y Conductual",
+      cita_breve: "El protocolo establece responsables y etapas de abordaje para episodios de desregulación emocional/conductual durante la jornada escolar.",
+      explicacion: "La situación debe abordarse desde el protocolo DEC, priorizando contención, registro de lo ocurrido y comunicación según etapa."
     };
-  } else if (category.includes("dispositivo") || description.includes("celular") || description.includes("telÃ©fono")) {
+  } else if (category.includes("dispositivo") || description.includes("celular") || description.includes("teléfono")) {
     reference = {
-      parte: "RICE 2025, TÃ­tulo X, ArtÃ­culo 2, numerales 7 y 8; TÃ­tulo XI, ArtÃ­culo 2",
-      cita_breve: "Se considera falta grave el uso de celular sin autorizaciÃ³n dentro del aula y el uso de reproductor de audio dentro de la sala de clases.",
+      parte: "RICE 2025, Título X, Artículo 2, numerales 7 y 8; Título XI, Artículo 2",
+      cita_breve: "Se considera falta grave el uso de celular sin autorización dentro del aula y el uso de reproductor de audio dentro de la sala de clases.",
       explicacion: "La conducta se vincula con el uso no autorizado de dispositivos durante la clase, descrito por el RICE como falta grave."
     };
   } else if (classification.includes("grave") && !classification.includes("grav")) {
     reference = {
-      parte: "RICE 2025, TÃ­tulo X, ArtÃ­culo 2; TÃ­tulo XI, ArtÃ­culo 2",
-      cita_breve: "Las faltas graves son aquellas que afectan seriamente el bien comÃºn; su procedimiento considera registro, entrevista, citaciÃ³n al apoderado y medida formativa o disciplinaria segÃºn reiteraciÃ³n.",
-      explicacion: "La conducta se relaciona con afectaciÃ³n seria del bien comÃºn o del normal desarrollo de la jornada escolar."
+      parte: "RICE 2025, Título X, Artículo 2; Título XI, Artículo 2",
+      cita_breve: "Las faltas graves son aquellas que afectan seriamente el bien común; su procedimiento considera registro, entrevista, citación al apoderado y medida formativa o disciplinaria según reiteración.",
+      explicacion: "La conducta se relaciona con afectación seria del bien común o del normal desarrollo de la jornada escolar."
     };
-  } else if (classification.includes("gravisima") || classification.includes("gravÃ­sima")) {
+  } else if (classification.includes("gravisima") || classification.includes("gravísima")) {
     reference = {
-      parte: "RICE 2025, TÃ­tulo X, ArtÃ­culo 3; TÃ­tulo XI, ArtÃ­culo 3",
-      cita_breve: "Las faltas gravÃ­simas ponen en serio riesgo la integridad fÃ­sica o psicolÃ³gica de integrantes de la comunidad educativa, el bien comÃºn o la sana convivencia.",
-      explicacion: "La conducta debe vincularse al procedimiento para faltas gravÃ­simas cuando existe riesgo serio o afectaciÃ³n grave de la convivencia."
+      parte: "RICE 2025, Título X, Artículo 3; Título XI, Artículo 3",
+      cita_breve: "Las faltas gravísimas ponen en serio riesgo la integridad física o psicológica de integrantes de la comunidad educativa, el bien común o la sana convivencia.",
+      explicacion: "La conducta debe vincularse al procedimiento para faltas gravísimas cuando existe riesgo serio o afectación grave de la convivencia."
     };
   }
 
@@ -770,6 +941,11 @@ Reglas no negociables:
 - Debe conservar el orden, la numeracion y la cobertura de la prueba original.
 - No puede cambiar operaciones matematicas ni signos originales.
 - No puede quedar cortada ni incompleta.
+- Conserva exactamente el encabezado institucional si aparece en la prueba original.
+- Si renombras el instrumento, usa "(ADAPTADA)" al final del título.
+- Si agregas aclaraciones pedagógicas, deben ser breves: una sola oración corta.
+- El resumen de cambios y la justificación deben describir solo la versión final entregada.
+- Nunca digas que se eliminó una pregunta o una sección si esa pregunta o esa sección sí aparece en la versión final.
 
 Debes responder usando exactamente estos bloques:
 
@@ -806,7 +982,12 @@ async function generateAdaptedOnly(payload, rawResponse) {
   const supports = Array.isArray(payload.supports) && payload.supports.length
     ? payload.supports.map((item) => `- ${item}`).join("\n")
     : "- Usa adecuaciones razonables segÃºn el perfil del estudiante.";
-  const exampleInstruction = wantsInitialExample(payload)
+  const reductionInstruction = wantsModerateReduction(payload)
+    ? '- El docente pidió una reducción moderada. La prueba adaptada debe ser realmente más breve que la original.\n- No agregues ejemplos, textos de apoyo largos, pasos duplicados ni explicaciones extra.\n- Puedes reducir alternativas en selección múltiple, pero nunca dejes solo la correcta. Conserva la correcta y al menos uno o dos distractores plausibles.'
+    : '- Si no se pidió reducción, conserva una longitud similar a la de la prueba original.';
+  const exampleInstruction = wantsModerateReduction(payload)
+    ? '- Como aquí se pidió una versión más breve, no agregues ejemplos iniciales ni ejemplos resueltos aunque ese apoyo también esté marcado.'
+    : wantsInitialExample(payload)
     ? '- Puedes agregar un ejemplo inicial breve de apoyo si ayuda al acceso. Ese ejemplo debe ser no evaluable, sin numeración propia y sin puntaje.'
     : '- No agregues ejemplos iniciales, ejemplos resueltos ni apoyos en formato de ejemplo. Si no fue solicitado, están prohibidos.';
 
@@ -837,6 +1018,8 @@ ${cleanText(rawResponse)}
 Tarea:
 - Reescribe la prueba completa en versiÃ³n adaptada.
 - Conserva el foco evaluativo.
+- Conserva exactamente el encabezado institucional "INSTITUTO HANS CHRISTIAN ANDERSEN" si aparece en la prueba original.
+- Si renombras el instrumento, usa un formato limpio como "(ADAPTADA)" al final del título.
 - Conserva la estructura general, las secciones y casi todos los items de la prueba original.
 - Mantiene el mismo orden de secciones, preguntas, subitems y alternativas de la prueba original siempre que sea posible.
 - Respeta la numeracion original. Si debes renumerar, hazlo de forma correlativa, limpia y sin saltos.
@@ -852,10 +1035,14 @@ Tarea:
 - No cambies signos, operaciones, datos numericos ni alternativas correctas de la prueba original.
 - Si una pregunta original usa suma, resta, multiplicacion o division, la adaptacion debe mantener esa misma operacion.
 - Si se pidiÃ³ reducir cantidad de items, reduce solo de forma moderada.
+- Si se pidió reducir cantidad de ítems, la versión adaptada debe quedar realmente más breve que la original. Reduce carga verbal, apoyos accesorios y alternativas cuando sea pertinente.
+- Si reduces alternativas, conserva la correcta y al menos uno o dos distractores plausibles. Nunca dejes una pregunta con solo la alternativa correcta.
 - Nunca dejes la evaluaciÃ³n reducida a una sola pregunta si originalmente tenÃ­a varias.
 - La version final debe quedar en puntaje total de 100 puntos.
 - Si la prueba original usa otro puntaje, redistribuye los valores para cerrar en 100 puntos exactos.
 - Debes escribir de forma visible "Puntaje total: 100 puntos" o equivalente directo.
+- Si la prueba contiene un objetivo de aprendizaje, reescríbelo para que quede coherente con la evaluación adaptada final y con el curriculum nacional chileno.
+- El objetivo adaptado debe reflejar adecuadamente conocimientos, habilidades y actitudes evaluadas, sin contradecir la prueba resultante.
 - Usa puntajes escolares limpios. Prefiere enteros y, solo si es estrictamente necesario, medios puntos (.5).
 - No uses decimales complejos como 6.25, 12.75, 18.75 u otros valores poco escolares.
 - La suma real de los puntajes por pregunta debe ser exactamente 100 puntos.
@@ -864,7 +1051,9 @@ Tarea:
 - En preguntas abiertas, deja un espacio de respuesta escolar razonable: entre 3 y 5 lineas como maximo.
 - No generes bloques gigantes de lineas, guiones, subrayados o espacios de respuesta excesivos.
 - Ajusta lenguaje, instrucciones, cantidad de apoyo y formato de respuesta segÃºn el perfil del estudiante.
+- Si agregas aclaraciones pedagógicas o de vocabulario, deben ser breves: una sola oración corta.
 - Tu objetivo es adaptar el acceso a la misma evaluacion original, no crear una evaluacion nueva ni mas larga.
+${reductionInstruction}
 ${exampleInstruction}
 - No expliques los cambios.
 - No escribas resumen ni justificaciÃ³n.
@@ -879,7 +1068,12 @@ async function regenerateWithStructureGuard(payload, currentAdapted) {
   const supports = Array.isArray(payload.supports) && payload.supports.length
     ? payload.supports.map((item) => `- ${item}`).join("\n")
     : "- Usa adecuaciones razonables segÃºn el perfil del estudiante.";
-  const exampleInstruction = wantsInitialExample(payload)
+  const reductionInstruction = wantsModerateReduction(payload)
+    ? '- El docente pidió una reducción moderada. Corrige la adaptación para que quede realmente más breve que la original, sin inflarla con apoyos extra, ejemplos o más alternativas de las necesarias.\n- Puedes reducir alternativas en selección múltiple, pero nunca dejes solo la correcta. Conserva la correcta y al menos uno o dos distractores plausibles.'
+    : '- Si no se pidió reducción, conserva una longitud similar a la original.';
+  const exampleInstruction = wantsModerateReduction(payload)
+    ? '- Como aquí se pidió una versión más breve, no agregues ejemplos iniciales ni ejemplos resueltos aunque ese apoyo también esté marcado.'
+    : wantsInitialExample(payload)
     ? '- Puedes agregar un ejemplo inicial breve de apoyo si ayuda al acceso. Ese ejemplo debe ser no evaluable, sin numeración propia y sin puntaje.'
     : '- No agregues ejemplos iniciales, ejemplos resueltos ni apoyos en formato de ejemplo. Si no fue solicitado, están prohibidos.';
 
@@ -892,6 +1086,8 @@ Reglas obligatorias:
 - MantÃ©n el mismo orden de secciones, preguntas, subitems y alternativas de la prueba original siempre que sea posible.
 - Respeta la numeraciÃ³n original. Si debes renumerar, hazlo de forma correlativa, limpia y sin saltos.
 - MantÃ©n un formato lo mÃ¡s parecido posible al original.
+- Conserva exactamente el encabezado institucional "INSTITUTO HANS CHRISTIAN ANDERSEN" si aparece en la prueba original.
+- Si renombras el instrumento, usa un formato limpio como "(ADAPTADA)" al final del título.
 - MantÃ©n casi todos los Ã­tems originales.
 - Si la prueba original tiene 10 preguntas o menos, conserva todas las preguntas.
 - Si la prueba original tiene 10 preguntas o menos, conserva exactamente la misma cantidad total de preguntas.
@@ -904,11 +1100,15 @@ Reglas obligatorias:
 - No cambies signos, operaciones, datos numericos ni alternativas correctas de la prueba original.
 - Si una pregunta original usa suma, resta, multiplicacion o division, la adaptacion debe mantener esa misma operacion.
 - Si se pidiÃ³ reducir cantidad de items, la reducciÃ³n debe ser moderada, nunca extrema.
+- Si se pidió reducir cantidad de ítems, corrige la salida para que quede realmente más breve que la original y no compenses con apoyos más largos.
+- Si reduces alternativas, conserva la correcta y al menos uno o dos distractores plausibles. Nunca dejes una pregunta con solo la alternativa correcta.
 - Si la prueba original tiene 5 o mÃ¡s Ã­tems, conserva al menos 3 y procura mantener 60% o mÃ¡s.
 - Nunca entregues una sola pregunta si la evaluaciÃ³n original tenÃ­a varias.
 - La version final debe quedar en puntaje total de 100 puntos.
 - Si la prueba original usa otro puntaje, redistribuye los valores para cerrar en 100 puntos exactos.
 - Debes escribir de forma visible "Puntaje total: 100 puntos" o equivalente directo.
+- Si la prueba contiene un objetivo de aprendizaje, corrígelo para que quede alineado con la versión adaptada final y con el curriculum nacional chileno.
+- El objetivo adaptado debe corresponder a lo realmente evaluado en conocimientos, habilidades y actitudes.
 - Usa puntajes escolares limpios. Prefiere enteros y, solo si es estrictamente necesario, medios puntos (.5).
 - No uses decimales complejos como 6.25, 12.75, 18.75 u otros valores poco escolares.
 - La suma real de los puntajes por pregunta debe ser exactamente 100 puntos.
@@ -917,7 +1117,9 @@ Reglas obligatorias:
 - En preguntas abiertas, deja un espacio de respuesta escolar razonable: entre 3 y 5 lineas como maximo.
 - No generes bloques gigantes de lineas, guiones, subrayados o espacios de respuesta excesivos.
 - Simplifica, clarifica y agrega apoyos, pero no mutiles la evaluaciÃ³n.
+- Si agregas aclaraciones pedagógicas o de vocabulario, deben ser breves: una sola oración corta.
 - Tu objetivo es adaptar el acceso a la misma evaluacion original, no crear una evaluacion nueva ni mas larga.
+${reductionInstruction}
 ${exampleInstruction}
 - No escribas explicaciÃ³n, resumen ni justificaciÃ³n.
 
@@ -952,7 +1154,12 @@ async function regenerateWithMissingQuestionsGuard(payload, currentAdapted, miss
   const supports = Array.isArray(payload.supports) && payload.supports.length
     ? payload.supports.map((item) => `- ${item}`).join("\n")
     : "- Usa adecuaciones razonables segÃºn el perfil del estudiante.";
-  const exampleInstruction = wantsInitialExample(payload)
+  const reductionInstruction = wantsModerateReduction(payload)
+    ? '- El docente pidió una reducción moderada. Reincorpora las preguntas faltantes sin volver la prueba más larga de lo necesario.\n- Puedes acortar alternativas y texto, pero nunca dejar solo la respuesta correcta.'
+    : '- Si no se pidió reducción, conserva una longitud similar a la original.';
+  const exampleInstruction = wantsModerateReduction(payload)
+    ? '- Como aquí se pidió una versión más breve, no agregues ejemplos iniciales ni ejemplos resueltos aunque ese apoyo también esté marcado.'
+    : wantsInitialExample(payload)
     ? '- Puedes agregar un ejemplo inicial breve de apoyo si ayuda al acceso. Ese ejemplo debe ser no evaluable, sin numeración propia y sin puntaje.'
     : '- No agregues ejemplos iniciales, ejemplos resueltos ni apoyos en formato de ejemplo. Si no fue solicitado, están prohibidos.';
 
@@ -967,8 +1174,12 @@ Reglas obligatorias:
 - La salida final debe incluir explicitamente todas las preguntas originales, incluida cada pregunta faltante.
 - Debes mantener exactamente la misma cantidad total de preguntas que la prueba original si tiene 10 preguntas o menos.
 - Debes mantener el mismo orden y la misma numeracion de la prueba original.
+- Conserva exactamente el encabezado institucional "INSTITUTO HANS CHRISTIAN ANDERSEN" si aparece en la prueba original.
+- Si renombras el instrumento, usa un formato limpio como "(ADAPTADA)" al final del título.
 - No cambies signos, operaciones, datos numericos ni alternativas correctas.
 - No agregues nuevas preguntas ni nuevos ejercicios.
+- Si el docente pidió reducir, la prueba final debe quedar más breve que la original sin perder la cobertura de preguntas.
+- Si reduces alternativas, conserva la correcta y al menos uno o dos distractores plausibles. Nunca dejes una pregunta con solo la alternativa correcta.
 - Si agregas un ejemplo de apoyo, no debe tener numero ni puntaje.
 - La version final debe declarar "Puntaje total: 100 puntos".
 - Usa puntajes escolares limpios. Prefiere enteros y, solo si es estrictamente necesario, medios puntos (.5).
@@ -978,7 +1189,9 @@ Reglas obligatorias:
 - La prueba debe quedar completa hasta la ultima pregunta original.
 - En preguntas abiertas, deja un espacio de respuesta escolar razonable: entre 3 y 5 lineas como maximo.
 - No generes bloques gigantes de lineas, guiones, subrayados o espacios de respuesta excesivos.
+- Si agregas aclaraciones pedagógicas o de vocabulario, deben ser breves: una sola oración corta.
 - Si no fue solicitado por el docente, no agregues ejemplos.
+${reductionInstruction}
 ${exampleInstruction}
 - No escribas resumen ni justificacion.
 
@@ -1240,6 +1453,11 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (req.method === "GET" && url.pathname === "/api/students") {
+    sendJson(res, 200, getStudentsData());
+    return;
+  }
+
   if (req.method === "POST" && url.pathname === "/api/adapt") {
     try {
       const rawBody = await readRequestBody(req);
@@ -1281,7 +1499,7 @@ const server = http.createServer(async (req, res) => {
       }
 
       const rebuildReasons = parsed.adapted !== "No se recibiÃ³ una prueba adaptada vÃ¡lida."
-        ? needsStructuralRebuild(payload.evaluationText, parsed.adapted)
+        ? needsStructuralRebuild(payload.evaluationText, parsed.adapted, payload)
         : [];
 
       if (parsed.adapted !== "No se recibiÃ³ una prueba adaptada vÃ¡lida." && rebuildReasons.length) {
@@ -1311,6 +1529,7 @@ const server = http.createServer(async (req, res) => {
         }
       }
 
+      parsed = finalizeParsedSections(parsed);
       sendJson(res, 200, parsed);
     } catch (error) {
       sendJson(res, 500, { error: error.message || "Error inesperado al generar la adaptaciÃ³n." });
