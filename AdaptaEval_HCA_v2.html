@@ -845,16 +845,17 @@ button:disabled{
           </div>
           <div class="field full">
             <label for="studentProfile">NEE o perfil del estudiante</label>
-            <div class="profile-helper">
-              <strong>Ayuda rápida para completar este campo</strong>
-              <div class="profile-steps">
-                <span class="profile-step">1. Si el estudiante aparece en la nómina, usa primero el diagnóstico 2026.</span>
-                <span class="profile-step">2. Si necesitas complementar, toca un diagnóstico o una dificultad de aprendizaje y ajusta el texto al caso del estudiante.</span>
-                <span class="profile-step">3. Si lo prefieres, escribe o corrige el perfil manualmente en el cuadro de abajo.</span>
-              </div>
-              <div class="profile-actions">
-                <button type="button" class="profile-chip" data-profile-fill="base">Insertar diagnóstico 2026</button>
-              </div>
+              <div class="profile-helper">
+                <strong>Ayuda rápida para completar este campo</strong>
+                <div class="profile-steps">
+                  <span class="profile-step">1. Selecciona primero el curso y, si corresponde, al estudiante desde la nómina institucional.</span>
+                  <span class="profile-step">2. Toca <strong>Insertar diagnóstico 2026</strong> para cargar la referencia del estudiante seleccionado.</span>
+                  <span class="profile-step">3. Si necesitas complementar, toca un diagnóstico o una dificultad de aprendizaje y ajusta el texto al caso del estudiante.</span>
+                  <span class="profile-step">4. Si lo prefieres, corrige o completa el perfil manualmente en el cuadro de abajo.</span>
+                </div>
+                <div class="profile-actions">
+                  <button type="button" class="profile-chip" data-profile-fill="base">Insertar diagnóstico 2026</button>
+                </div>
               <div class="profile-examples">
                 <button type="button" class="profile-chip" data-profile-example="TEA nivel 1, necesita instrucciones breves, lenguaje claro y menor sobrecarga verbal.">TEA nivel 1</button>
                 <button type="button" class="profile-chip" data-profile-example="TDAH, necesita instrucciones paso a paso, tiempos breves de trabajo y formato claro para sostener la atención.">TDAH</button>
@@ -1300,16 +1301,16 @@ function summarizeWarnings(warnings) {
   if (!joined.trim()) return "";
 
   if (/no logró conservar la evaluación completa|faltan las preguntas/i.test(joined)) {
-    return "La IA no logró conservar la evaluación completa. Revisa la salida o vuelve a intentar con una instrucción más precisa.";
+    return "La adaptación se revisó automáticamente, pero aún faltan partes de la evaluación. Revísala antes de usarla o vuelve a generarla.";
   }
-  if (/omitía preguntas originales|cobertura completa/i.test(joined)) {
-    return "La primera versión vino incompleta y fue corregida automáticamente para conservar toda la evaluación.";
+  if (/agregó más preguntas|omitía preguntas originales|cobertura completa|problemas estructurales|espacios de respuesta abiertos demasiado extensos/i.test(joined)) {
+    return "La primera versión fue ajustada automáticamente para mejorar la estructura y mantener la evaluación más ordenada.";
   }
-  if (/puntaje total de 100|puntajes decimales/i.test(joined)) {
-    return "La adaptación fue ajustada automáticamente para respetar el formato de evaluación del establecimiento.";
+  if (/puntaje total de 100|puntajes decimales|suma real de los puntajes|puntajes declarados por sección no coinciden/i.test(joined)) {
+    return "La adaptación fue ajustada automáticamente para respetar el formato de puntaje del establecimiento.";
   }
 
-  return joined;
+  return "La adaptación fue revisada y ajustada automáticamente antes de mostrarse.";
 }
 
 function showLoader(on) {
@@ -1358,6 +1359,109 @@ function validateInput() {
   return true;
 }
 
+function isInvalidResultText(text) {
+  const cleaned = cleanText(text);
+  if (!cleaned) return true;
+  return /^No se recibi[oó]/i.test(cleaned) || /^No fue posible/i.test(cleaned);
+}
+
+function extractEmbeddedBlock(source, kind) {
+  const text = repairMojibake(String(source || ""));
+  if (!text.trim()) return "";
+
+  const patterns = {
+    adapted: /===PRUEBA_ADAPTADA===([\s\S]*?)(?:===FIN_PRUEBA_ADAPTADA===|===RESUMEN_CAMBIOS===|===JUSTIFICACION_DOCENTE===|$)/i,
+    summary: /===RESUMEN_CAMBIOS===([\s\S]*?)(?:===FIN_RESUMEN_CAMBIOS===|===JUSTIFICACION_DOCENTE===|$)/i,
+    teacher: /===JUSTIFICACION_DOCENTE===([\s\S]*?)(?:===FIN_JUSTIFICACION_DOCENTE===|$)/i
+  };
+
+  const match = text.match(patterns[kind]);
+  return match ? cleanText(match[1]) : "";
+}
+
+function parseTeacherTableClient(text) {
+  const cleaned = cleanText(text);
+  if (!cleaned) return { rows: [], note: "" };
+
+  const noteMatch = cleaned.match(/NOTA_LEGAL\s*:\s*([\s\S]*)$/i);
+  const note = noteMatch ? cleanText(noteMatch[1]) : "";
+  const body = noteMatch ? cleanText(cleaned.slice(0, noteMatch.index)) : cleaned;
+
+  const blocks = body
+    .split(/\n\s*---+\s*\n/g)
+    .map((block) => cleanText(block))
+    .filter(Boolean);
+
+  const rows = blocks.map((block) => {
+    const row = { cambio: "", justificacion: "", decreto: "", optimizacion: "" };
+    let currentKey = "";
+
+    block.split("\n").forEach((line) => {
+      const match = line.match(/^(CAMBIO|JUSTIFICACION|DECRETO|OPTIMIZACION)\s*:\s*(.*)$/i);
+      if (match) {
+        currentKey = match[1].toUpperCase();
+        const value = cleanText(match[2]);
+        if (currentKey === "CAMBIO") row.cambio = value;
+        if (currentKey === "JUSTIFICACION") row.justificacion = value;
+        if (currentKey === "DECRETO") row.decreto = value;
+        if (currentKey === "OPTIMIZACION") row.optimizacion = value;
+        return;
+      }
+
+      if (!currentKey) return;
+      const key =
+        currentKey === "CAMBIO" ? "cambio" :
+        currentKey === "JUSTIFICACION" ? "justificacion" :
+        currentKey === "DECRETO" ? "decreto" :
+        "optimizacion";
+      row[key] = cleanText(`${row[key]}\n${line}`);
+    });
+
+    return row;
+  }).filter((row) => row.cambio || row.justificacion || row.decreto || row.optimizacion);
+
+  return { rows, note };
+}
+
+function recoverStructuredSections(payload) {
+  const combined = repairMojibake([
+    payload.adapted || "",
+    payload.summary || "",
+    payload.teacher || ""
+  ].filter(Boolean).join("\n\n"));
+
+  const embeddedAdapted = extractEmbeddedBlock(combined, "adapted");
+  const embeddedSummary = extractEmbeddedBlock(combined, "summary");
+  const embeddedTeacher = extractEmbeddedBlock(combined, "teacher");
+
+  const adapted = (!isInvalidResultText(payload.adapted) && !/===PRUEBA_ADAPTADA===/i.test(payload.adapted || ""))
+    ? repairMojibake(payload.adapted)
+    : embeddedAdapted || repairMojibake(payload.adapted || "");
+
+  const summaryHasMarkers = /===PRUEBA_ADAPTADA===|===JUSTIFICACION_DOCENTE===|===RESUMEN_CAMBIOS===/i.test(payload.summary || "");
+  const teacherHasMarkers = /===PRUEBA_ADAPTADA===|===JUSTIFICACION_DOCENTE===|===RESUMEN_CAMBIOS===/i.test(payload.teacher || "");
+
+  const summary = (!isInvalidResultText(payload.summary) && !summaryHasMarkers)
+    ? repairMojibake(payload.summary)
+    : embeddedSummary || "No se recibió un resumen de cambios válido.";
+
+  const teacher = (!isInvalidResultText(payload.teacher) && !teacherHasMarkers)
+    ? repairMojibake(payload.teacher)
+    : embeddedTeacher || "No se recibió una justificación docente válida.";
+
+  const teacherTable = (payload.teacher_rows && payload.teacher_rows.length)
+    ? { rows: payload.teacher_rows, note: payload.teacher_note || "" }
+    : parseTeacherTableClient(teacher);
+
+  return {
+    adapted: cleanText(adapted) || "No se recibió una prueba adaptada válida.",
+    summary: cleanText(summary) || "No se recibió un resumen de cambios válido.",
+    teacher: cleanText(teacher) || "No se recibió una justificación docente válida.",
+    teacher_rows: teacherTable.rows,
+    teacher_note: teacherTable.note
+  };
+}
+
 function renderTeacherContent(payload) {
   if (payload.teacher_rows && payload.teacher_rows.length) {
     const rowsHtml = payload.teacher_rows.map((row) => `
@@ -1394,13 +1498,15 @@ function renderTeacherContent(payload) {
 }
 
 function renderResults(payload) {
-  state.results.adapted = payload.adapted || "No se recibió una prueba adaptada válida.";
-  state.results.summary = payload.summary || "No se recibió un resumen de cambios válido.";
-  state.results.teacher = payload.teacher || "No se recibió una justificación docente válida.";
+  const recovered = recoverStructuredSections(payload);
+
+  state.results.adapted = recovered.adapted;
+  state.results.summary = recovered.summary;
+  state.results.teacher = recovered.teacher;
 
   els.adaptedContent.innerHTML = formatAdaptedAssessment(state.results.adapted);
   els.summaryContent.textContent = state.results.summary;
-  renderTeacherContent(payload);
+  renderTeacherContent(recovered);
   els.resultsCard.hidden = false;
 
   if (payload.warnings && payload.warnings.length) {
