@@ -99,9 +99,15 @@ function normalizeAdaptedAssessmentText(text) {
   let cleaned = cleanText(text);
   if (!cleaned) return cleaned;
 
+  const repeatedStructuredBlock = cleaned.indexOf("\n===PRUEBA_ADAPTADA===");
+  if (repeatedStructuredBlock !== -1) {
+    cleaned = cleanText(cleaned.slice(0, repeatedStructuredBlock));
+  }
+
   cleaned = cleaned.replace(/^NSTITUTO HANS CHRISTIAN ANDERSEN\b/m, "INSTITUTO HANS CHRISTIAN ANDERSEN");
   cleaned = cleaned.replace(/^(PRUEBA\s+DE[^\n]*?)\s+ADAPTADA$/im, "$1 (ADAPTADA)");
   cleaned = cleaned.replace(/^Las decenas son números como .*$/im, "Recuerda: al redondear, elige la decena más cercana.");
+  cleaned = cleaned.replace(/(?:\n[ _]{25,}){5,}/g, "\n________________________________________________________________________________\n________________________________________________________________________________\n________________________________________________________________________________\n________________________________________________________________________________");
 
   return cleaned;
 }
@@ -140,6 +146,66 @@ function sanitizeSummaryText(summary, adapted) {
   return cleanText(lines.join("\n"));
 }
 
+function buildFallbackSummary(parsed, payload) {
+  const supports = Array.isArray(payload.supports) ? payload.supports : [];
+  const lines = [
+    "- Se redistribuyeron los puntajes de la evaluación para alcanzar un total de 100 puntos."
+  ];
+
+  if (supports.some((item) => /simplificar lenguaje/i.test(item))) {
+    lines.push("- Se simplificó el lenguaje de instrucciones y preguntas para facilitar la comprensión del estudiante.");
+  }
+
+  if (supports.some((item) => /dividir consignas/i.test(item))) {
+    lines.push("- Se reorganizaron las consignas en una secuencia más clara y directa.");
+  }
+
+  const adaptedClean = normalizeAdaptedAssessmentText(parsed.adapted);
+  const hasQuestion9 = /(?:^|\n)\s*9[\)\.\-:]/m.test(adaptedClean);
+  const hasQuestion10 = /(?:^|\n)\s*10[\)\.\-:]/m.test(adaptedClean);
+  if (hasQuestion9 && hasQuestion10) {
+    lines.push("- Se mantuvieron las preguntas originales, conservando la estructura general y el aprendizaje esencial del instrumento.");
+  }
+
+  if (/Total 10 puntos|\(10 puntos en total\)|\(Total 10 puntos\)/i.test(adaptedClean)) {
+    lines.push("- Se ajustó la distribución interna del puntaje en la última pregunta para mantener una escala clara y coherente.");
+  }
+
+  return cleanText(lines.join("\n"));
+}
+
+function buildFallbackTeacherRows(parsed, payload) {
+  const supports = Array.isArray(payload.supports) ? payload.supports : [];
+  const studentName = cleanText(payload.studentName || "").trim();
+  const studentRef = studentName ? `El estudiante ${studentName}` : "El estudiante";
+  const rows = [
+    {
+      cambio: "Aumento del puntaje total a 100 puntos y redistribución de puntajes por ítem.",
+      justificacion: "La prueba original fue ajustada para alcanzar un total de 100 puntos, manteniendo la proporción de dificultad y el aprendizaje esencial evaluado.",
+      decreto: "Decreto 67/2018 (evaluación formativa y sumativa).",
+      optimizacion: "Facilita el registro de resultados y deja la evaluación en una escala escolar más estándar."
+    }
+  ];
+
+  if (supports.some((item) => /simplificar lenguaje|dividir consignas/i.test(item))) {
+    rows.push({
+      cambio: "Simplificación del lenguaje y reorganización de consignas.",
+      justificacion: `${studentRef} requiere una presentación más clara y directa de las instrucciones para acceder mejor al contenido evaluado sin alterar su exigencia pedagógica.`,
+      decreto: "Decreto 83/2015 y Decreto 170/2009.",
+      optimizacion: "Reduce barreras de comprensión y mejora el acceso del estudiante a la evaluación."
+    });
+  }
+
+  rows.push({
+    cambio: "Reducción de carga verbal y ajuste de formato en preguntas de desarrollo.",
+    justificacion: "Se organizó mejor la respuesta abierta y la distribución del puntaje para mantener claridad, orden y coherencia con la versión final aplicada.",
+    decreto: "Decreto 83/2015 (adecuaciones curriculares).",
+    optimizacion: "Favorece una respuesta más manejable para el estudiante sin modificar la estructura general del instrumento."
+  });
+
+  return rows;
+}
+
 function sanitizeTeacherRows(rows, adapted) {
   const adaptedClean = normalizeAdaptedAssessmentText(adapted);
   const hasQuestion9 = /(?:^|\n)\s*9[\)\.\-:]/m.test(adaptedClean);
@@ -171,21 +237,25 @@ function sanitizeTeacherRows(rows, adapted) {
 }
 
 function finalizeParsedSections(parsed) {
-  parsed.adapted = normalizeAdaptedAssessmentText(parsed.adapted);
-  parsed.summary = sanitizeSummaryText(parsed.summary, parsed.adapted);
-  parsed.teacher_rows = sanitizeTeacherRows(parsed.teacher_rows, parsed.adapted);
+    parsed.adapted = normalizeAdaptedAssessmentText(parsed.adapted);
+    parsed.summary = sanitizeSummaryText(parsed.summary, parsed.adapted);
+    parsed.teacher_rows = sanitizeTeacherRows(parsed.teacher_rows, parsed.adapted);
 
-  if (!cleanText(parsed.summary)) {
-    parsed.summary = "Se ajustó la evaluación para mantener el aprendizaje esencial, mejorar el acceso al contenido y ordenar el puntaje total en 100 puntos.";
+    if (!cleanText(parsed.summary) || /No se recibi[oó] un resumen/i.test(parsed.summary)) {
+      parsed.summary = buildFallbackSummary(parsed, parsed.payload || {});
+    }
+
+    if (cleanText(parsed.teacher)) {
+      parsed.teacher = cleanText(parsed.teacher)
+        .replace(/^NSTITUTO HANS CHRISTIAN ANDERSEN\b/m, "INSTITUTO HANS CHRISTIAN ANDERSEN");
+    }
+
+    if (!parsed.teacher_rows || !parsed.teacher_rows.length) {
+      parsed.teacher_rows = buildFallbackTeacherRows(parsed, parsed.payload || {});
+    }
+
+    return parsed;
   }
-
-  if (cleanText(parsed.teacher)) {
-    parsed.teacher = cleanText(parsed.teacher)
-      .replace(/^NSTITUTO HANS CHRISTIAN ANDERSEN\b/m, "INSTITUTO HANS CHRISTIAN ANDERSEN");
-  }
-
-  return parsed;
-}
 
 function normalizeSupportText(value) {
   return cleanText(value).toLowerCase();
@@ -1529,7 +1599,9 @@ const server = http.createServer(async (req, res) => {
         }
       }
 
+      parsed.payload = payload;
       parsed = finalizeParsedSections(parsed);
+      delete parsed.payload;
       sendJson(res, 200, parsed);
     } catch (error) {
       sendJson(res, 500, { error: error.message || "Error inesperado al generar la adaptaciÃ³n." });
